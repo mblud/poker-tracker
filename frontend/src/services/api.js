@@ -24,6 +24,10 @@ export const playerService = {
   // NEW rebuy functions
   processRebuy: (rebuyData) => api.post('/api/rebuys', rebuyData),
   getRecentRebuys: () => api.get('/api/rebuys/recent'),
+  
+    // NEW admin functions
+    getRecentTransactions: () => api.get('/api/transactions/recent'),
+    deletePayment: (playerId, paymentId) => api.delete(`/api/players/${playerId}/payments/${paymentId}`),
 }
 
 // Export the axios instance in case we need it elsewhere

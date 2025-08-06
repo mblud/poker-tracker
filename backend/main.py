@@ -180,26 +180,43 @@ def get_player_payment_summary(player_id: str):
 
 @app.post("/api/rebuys")
 def process_rebuy(rebuy_data: RebuyRequest):
-    # Find player by name
+    # Try to find existing player by name
     player_id = None
     for pid, player in players_db.items():
         if player["name"].lower() == rebuy_data.player_name.lower():
             player_id = pid
             break
     
+    # If player doesn't exist, CREATE THEM automatically
     if not player_id:
-        raise HTTPException(status_code=404, detail=f"Player '{rebuy_data.player_name}' not found")
+        player_id = str(uuid.uuid4())
+        new_player = Player(
+            id=player_id,
+            name=rebuy_data.player_name,
+            created_at=datetime.now()
+        )
+        players_db[player_id] = new_player.dict()
+        player = players_db[player_id]
+        is_new_player = True
+    else:
+        player = players_db[player_id]
+        is_new_player = False
     
-    # Process as rebuy (no dealer fees)
-    player = players_db[player_id]
+    # SMART DETECTION: Check if this is their first transaction
+    has_any_previous_transactions = len(player["payments"]) > 0
+    
+    # If no previous transactions, this is a buy-in (apply dealer fee)
+    # If they have previous transactions, this is a rebuy (no dealer fee)
+    is_first_buyin = not has_any_previous_transactions
+    transaction_type = TransactionType.BUY_IN if is_first_buyin else TransactionType.REBUY
     
     payment_id = str(uuid.uuid4())
     new_payment = Payment(
         id=payment_id,
         amount=rebuy_data.amount,
         method=rebuy_data.method,
-        type=TransactionType.REBUY,
-        dealer_fee_applied=False,  # Rebuys never have dealer fees
+        type=transaction_type,
+        dealer_fee_applied=is_first_buyin,
         timestamp=datetime.now()
     )
     
@@ -211,7 +228,23 @@ def process_rebuy(rebuy_data: RebuyRequest):
     )
     
     players_db[player_id] = player
-    return {"success": True, "message": f"Rebuy processed for {player['name']}"}
+    
+    # Return helpful message
+    if is_new_player:
+        message = f"Welcome {player['name']}! First buy-in processed (${DEALER_FEE} dealer fee applied)"
+    else:
+        transaction_word = "buy-in" if is_first_buyin else "rebuy"
+        fee_message = f" (${DEALER_FEE} dealer fee applied)" if is_first_buyin else " (no dealer fee)"
+        message = f"{transaction_word.title()} processed for {player['name']}{fee_message}"
+    
+    return {
+        "success": True, 
+        "message": message,
+        "is_new_player": is_new_player,
+        "is_first_buyin": is_first_buyin,
+        "dealer_fee_applied": is_first_buyin,
+        "amount_to_pot": rebuy_data.amount - (DEALER_FEE if is_first_buyin else 0)
+    }
 
 @app.get("/api/rebuys/recent")
 def get_recent_rebuys():
@@ -228,3 +261,49 @@ def get_recent_rebuys():
     
     recent_rebuys.sort(key=lambda x: x["timestamp"], reverse=True)
     return recent_rebuys[:5]
+@app.delete("/api/players/{player_id}/payments/{payment_id}")
+def delete_payment(player_id: str, payment_id: str):
+    if player_id not in players_db:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player = players_db[player_id]
+    
+    # Find and remove the payment
+    payment_to_remove = None
+    for i, payment in enumerate(player["payments"]):
+        if payment["id"] == payment_id:
+            payment_to_remove = player["payments"].pop(i)
+            break
+    
+    if not payment_to_remove:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Recalculate player total
+    player["total"] = sum(
+        payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
+        for payment in player["payments"]
+    )
+    
+    players_db[player_id] = player
+    return {"success": True, "message": f"Removed ${payment_to_remove['amount']} {payment_to_remove['type']} for {player['name']}"}
+
+@app.get("/api/transactions/recent")
+def get_recent_transactions():
+    """Get all recent transactions across all players for admin view"""
+    all_transactions = []
+    for player in players_db.values():
+        for payment in player["payments"]:
+            all_transactions.append({
+                "id": payment["id"],
+                "player_id": player["id"],
+                "player_name": player["name"],
+                "amount": payment["amount"],
+                "method": payment["method"],
+                "type": payment["type"],
+                "dealer_fee_applied": payment["dealer_fee_applied"],
+                "timestamp": payment["timestamp"]
+            })
+    
+    # Sort by timestamp, most recent first
+    all_transactions.sort(key=lambda x: x["timestamp"], reverse=True)
+    return all_transactions[:20]  # Return last 20 transactions

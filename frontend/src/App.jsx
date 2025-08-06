@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { playerService } from './services/api'
 import { QRCodeSVG } from 'qrcode.react'
+import RebuyForm from './components/RebuyForm'
 
-function App() {
+function PokerTracker() {
+  // Move all your existing state and functions here
   const [players, setPlayers] = useState([])
   const [playerName, setPlayerName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,12 +29,29 @@ function App() {
 
   // Generate QR code URL
   const rebuyUrl = `${window.location.origin}/rebuy`
+// Admin panel state
+const [showAdminPanel, setShowAdminPanel] = useState(false)
+const [recentTransactions, setRecentTransactions] = useState([])
+const [showPinModal, setShowPinModal] = useState(false)
+const [pinInput, setPinInput] = useState('')
+const [adminPin] = useState('6969') // Host can change this
 
-  // Load players and game stats when component starts
-  useEffect(() => {
+  // Keep ALL your existing functions (loadPlayers, loadGameStats, addPlayer, etc.)
+
+  // Load players and game stats when component starts + polling
+useEffect(() => {
+  loadPlayers()
+  loadGameStats()
+  
+  // Set up polling every 5 seconds to auto-update the page
+  const interval = setInterval(() => {
     loadPlayers()
     loadGameStats()
-  }, [])
+  }, 5000) // Update every 5 seconds
+  
+  // Cleanup interval when component unmounts
+  return () => clearInterval(interval)
+}, [])
 
   // Polling for recent rebuys when QR modal is open
   useEffect(() => {
@@ -71,6 +91,7 @@ function App() {
       console.error('Error loading game stats:', err)
     }
   }
+  
 
   const loadRecentRebuys = async () => {
     try {
@@ -165,6 +186,57 @@ function App() {
       `${data.count} ${method} ($${data.total.toFixed(0)})`
     ).join(', ')
   }
+  const loadRecentTransactions = async () => {
+    try {
+      const response = await playerService.getRecentTransactions()
+      setRecentTransactions(response.data)
+    } catch (err) {
+      console.error('Error loading transactions:', err)
+    }
+  }
+  
+  const deleteTransaction = async (playerId, paymentId, playerName, amount) => {
+    if (!confirm(`Delete $${amount} transaction for ${playerName}?`)) {
+      return
+    }
+    
+    try {
+      setLoading(true)
+      await playerService.deletePayment(playerId, paymentId)
+      await loadPlayers()
+      await loadGameStats()
+      await loadRecentTransactions()
+      setError('')
+    } catch (err) {
+      setError('Failed to delete transaction')
+      console.error('Error deleting transaction:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const openAdminPanel = () => {
+    setShowPinModal(true)
+    setPinInput('')
+  }
+  
+  const verifyPin = () => {
+    if (pinInput === adminPin) {
+      setShowPinModal(false)
+      setShowAdminPanel(true)
+      loadRecentTransactions()
+      setPinInput('')
+    } else {
+      alert('Incorrect PIN')
+      setPinInput('')
+    }
+  }
+  
+  const handlePinKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      verifyPin()
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 p-4">
@@ -175,29 +247,37 @@ function App() {
           <p className="text-green-100 text-xl">Professional game management</p>
         </header>
 
-        {/* Enhanced Game Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="card text-center">
-            <p className="text-sm text-gray-500">Total Pot</p>
-            <p className="text-2xl font-bold text-green-600">${gameStats.total_pot.toFixed(2)}</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-sm text-gray-500">Dealer Fees</p>
-            <p className="text-2xl font-bold text-blue-600">${gameStats.total_dealer_fees.toFixed(2)}</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-sm text-gray-500">Total Buy-Ins</p>
-            <p className="text-2xl font-bold text-purple-600">${gameStats.total_buy_ins.toFixed(2)}</p>
-          </div>
-          <div className="card text-center">
-            <button
-              onClick={openQRModal}
-              className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
-            >
-              📱 Show QR Rebuy
-            </button>
-          </div>
-        </div>
+     {/* Enhanced Game Stats */}
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  <div className="card text-center">
+    <p className="text-sm text-gray-500">Total Pot</p>
+    <p className="text-2xl font-bold text-green-600">${gameStats.total_pot.toFixed(2)}</p>
+  </div>
+  <div className="card text-center">
+    <p className="text-sm text-gray-500">Dealer Fees</p>
+    <p className="text-2xl font-bold text-blue-600">${gameStats.total_dealer_fees.toFixed(2)}</p>
+  </div>
+  <div className="card text-center">
+    <p className="text-sm text-gray-500">Total Buy-Ins</p>
+    <p className="text-2xl font-bold text-purple-600">${gameStats.total_buy_ins.toFixed(2)}</p>
+  </div>
+  <div className="card text-center">
+    <div className="space-y-2">
+      <button
+        onClick={openQRModal}
+        className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-sm"
+      >
+        📱 Player Buy-in/Rebuy
+      </button>
+      <button
+        onClick={openAdminPanel}
+        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 font-semibold text-sm"
+      >
+        ⚙️ Admin Panel
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* Payment Method Breakdown */}
         {Object.keys(gameStats.payment_method_breakdown).length > 0 && (
@@ -309,8 +389,8 @@ function App() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <div className="text-center">
-                <h3 className="text-2xl font-semibold mb-4">📱 Player Rebuy QR Code</h3>
-                <p className="text-gray-600 mb-6">Players scan this code to rebuy themselves</p>
+              <h3 className="text-2xl font-semibold mb-4">📱 Player Buy-in & Rebuy</h3>
+              <p className="text-gray-600 mb-6">Players scan this for buy-ins or rebuys</p>
                 
                 {/* QR Code Display */}
                 <QRCodeSVG 
@@ -445,8 +525,148 @@ function App() {
             </div>
           </div>
         )}
+        {/* PIN Modal */}
+        {showPinModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <div className="text-center">
+                <h3 className="text-2xl font-semibold mb-4">🔒 Admin Access</h3>
+                <p className="text-gray-600 mb-6">Enter PIN to access admin panel</p>
+                
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  onKeyPress={handlePinKeyPress}
+                  placeholder="Enter 4-digit PIN"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-lg text-center"
+                  maxLength="4"
+                  autoFocus
+                />
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowPinModal(false)
+                      setPinInput('')
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={verifyPin}
+                    disabled={pinInput.length !== 4}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Access Admin
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-400 mt-4">
+                  Default PIN: 1234 (host can change this)
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Panel Modal */}
+{showAdminPanel && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-2xl font-semibold">⚙️ Admin Panel</h3>
+        <button
+          onClick={() => setShowAdminPanel(false)}
+          className="text-gray-500 hover:text-gray-700 text-2xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="overflow-y-auto max-h-[60vh]">
+        <h4 className="text-lg font-semibold mb-4">Recent Transactions</h4>
+        
+        {recentTransactions.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No transactions yet</p>
+        ) : (
+          <div className="space-y-3">
+            {recentTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex justify-between items-center p-4 border border-gray-200 rounded-lg bg-gray-50"
+              >
+                <div className="flex-1">
+                  <div className="font-medium">{transaction.player_name}</div>
+                  <div className="text-sm text-gray-600">
+                    {transaction.type === 'buy-in' ? '🎯' : '🔄'} 
+                    {transaction.type} • ${transaction.amount} • {transaction.method}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(transaction.timestamp).toLocaleString()}
+                    {transaction.dealer_fee_applied && ' • $35 dealer fee applied'}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold text-green-600">
+                    ${transaction.amount}
+                  </span>
+                  <button
+                    onClick={() => deleteTransaction(
+                      transaction.player_id, 
+                      transaction.id, 
+                      transaction.player_name, 
+                      transaction.amount
+                    )}
+                    disabled={loading}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 pt-4 border-t">
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            Showing last {recentTransactions.length} transactions
+          </div>
+          <button
+            onClick={() => {
+              loadRecentTransactions()
+              loadPlayers()
+              loadGameStats()
+            }}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            🔄 Refresh Data
+          </button>
+        </div>
       </div>
     </div>
+  </div>
+)}
+      </div>
+    </div>
+  )
+}
+
+// Main App component with routing
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<PokerTracker />} />
+        <Route path="/rebuy" element={<RebuyForm />} />
+      </Routes>
+    </Router>
   )
 }
 
