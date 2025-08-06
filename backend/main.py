@@ -82,6 +82,10 @@ cash_outs_db = {}  # NEW: Store cash outs
 def root():
     return {"message": "🃏 Poker Tracker API is running!"}
 
+@app.get("/api/health") 
+def health_check():
+    return {"status": "healthy", "players": len(players_db)}
+
 @app.get("/api/test")
 def test():
     return {"status": "success", "message": "Backend connected!"}
