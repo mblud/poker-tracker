@@ -58,11 +58,25 @@ class Player(BaseModel):
     payments: List[Payment] = []
     created_at: datetime
 
+# NEW: Cash Out Models
+class CashOut(BaseModel):
+    id: str
+    player_id: str
+    amount: float
+    timestamp: datetime
+    reason: Optional[str] = "Player cashed out"
+    confirmed: bool = False
+
+class CashOutRequest(BaseModel):
+    amount: float
+    reason: Optional[str] = "Player cashed out"
+
 # Game settings
 DEALER_FEE = 35.0
 
 # In-memory storage
 players_db = {}
+cash_outs_db = {}  # NEW: Store cash outs
 
 @app.get("/")
 def root():
@@ -103,7 +117,6 @@ def add_buyin(player_id: str, buyin_data: BuyInRequest):
     # Create payment record
     payment_id = str(uuid.uuid4())
     dealer_fee_applied = not has_previous_buyin  # Apply fee only on first buy-in
-    amount_to_pot = buyin_data.amount - (DEALER_FEE if dealer_fee_applied else 0)
     
     new_payment = Payment(
         id=payment_id,
@@ -132,6 +145,7 @@ def get_game_stats():
     total_pot = 0
     total_dealer_fees = 0
     total_buy_ins = 0
+    total_cash_outs = 0
     payment_method_totals = {}
     
     for player in players_db.values():
@@ -156,10 +170,18 @@ def get_game_stats():
                 payment_method_totals[method]["total"] += payment["amount"]
                 payment_method_totals[method]["count"] += 1
     
+    # Subtract confirmed cash outs from pot
+    for player_cash_outs in cash_outs_db.values():
+        for cash_out in player_cash_outs:
+            if cash_out["confirmed"]:
+                total_cash_outs += cash_out["amount"]
+                total_pot -= cash_out["amount"]
+    
     return {
-        "total_pot": total_pot,
-        "total_dealer_fees": total_dealer_fees,
-        "total_buy_ins": total_buy_ins,
+        "total_pot": round(total_pot, 2),
+        "total_dealer_fees": round(total_dealer_fees, 2),
+        "total_buy_ins": round(total_buy_ins, 2),
+        "total_cash_outs": round(total_cash_outs, 2),
         "player_count": len(players_db),
         "payment_method_breakdown": payment_method_totals
     }
@@ -336,6 +358,10 @@ def delete_player(player_id: str):
     # Remove the player
     del players_db[player_id]
     
+    # Also remove any cash outs for this player
+    if player_id in cash_outs_db:
+        del cash_outs_db[player_id]
+    
     return {
         "success": True, 
         "message": f"Deleted {player_name} (${player_total} removed from pot, {transaction_count} transactions deleted)"
@@ -393,3 +419,103 @@ def get_pending_payments():
     # Sort by timestamp (newest first)
     pending_payments.sort(key=lambda x: x["timestamp"], reverse=True)
     return pending_payments
+
+# NEW CASH OUT ENDPOINTS
+
+@app.post("/api/players/{player_id}/cashout")
+async def create_cash_out(player_id: str, request: CashOutRequest):
+    """Create a cash out request for a player"""
+    if player_id not in players_db:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player = players_db[player_id]
+    cash_out_amount = request.amount
+    
+    # Validate cash out amount
+    if cash_out_amount <= 0:
+        raise HTTPException(status_code=400, detail="Cash out amount must be positive")
+    
+    if cash_out_amount > player["total"]:
+        raise HTTPException(status_code=400, detail="Cannot cash out more than player's total")
+    
+    # Create cash out record
+    cash_out_id = str(uuid.uuid4())
+    cash_out = {
+        "id": cash_out_id,
+        "player_id": player_id,
+        "amount": cash_out_amount,
+        "timestamp": datetime.now().isoformat(),
+        "reason": request.reason,
+        "confirmed": False
+    }
+    
+    if player_id not in cash_outs_db:
+        cash_outs_db[player_id] = []
+    
+    cash_outs_db[player_id].append(cash_out)
+    
+    return {"success": True, "cash_out_id": cash_out_id}
+
+@app.get("/api/pending-cashouts")
+async def get_pending_cash_outs():
+    """Get all pending cash outs for admin confirmation"""
+    pending = []
+    for player_id, player_cash_outs in cash_outs_db.items():
+        for cash_out in player_cash_outs:
+            if not cash_out["confirmed"]:
+                player_name = players_db[player_id]["name"] if player_id in players_db else "Unknown"
+                pending.append({
+                    **cash_out,
+                    "player_name": player_name
+                })
+    
+    # Sort by timestamp (newest first)
+    pending.sort(key=lambda x: x["timestamp"], reverse=True)
+    return pending
+
+@app.put("/api/cashouts/{cash_out_id}/confirm")
+async def confirm_cash_out(cash_out_id: str):
+    """Confirm a cash out and update player total"""
+    # Find the cash out
+    cash_out_found = None
+    player_id_found = None
+    
+    for player_id, player_cash_outs in cash_outs_db.items():
+        for cash_out in player_cash_outs:
+            if cash_out["id"] == cash_out_id and not cash_out["confirmed"]:
+                cash_out_found = cash_out
+                player_id_found = player_id
+                break
+        if cash_out_found:
+            break
+    
+    if not cash_out_found:
+        raise HTTPException(status_code=404, detail="Cash out not found or already confirmed")
+    
+    # Confirm the cash out
+    cash_out_found["confirmed"] = True
+    cash_out_found["confirmed_at"] = datetime.now().isoformat()
+    
+    # Reduce player's total
+    if player_id_found in players_db:
+        players_db[player_id_found]["total"] -= cash_out_found["amount"]
+        
+        # Ensure total doesn't go negative
+        if players_db[player_id_found]["total"] < 0:
+            players_db[player_id_found]["total"] = 0
+    
+    return {"success": True}
+
+@app.get("/api/cashouts/history")
+async def get_cash_out_history():
+    """Get all confirmed cash outs for reconciliation"""
+    confirmed_cash_outs = []
+    for player_id, player_cash_outs in cash_outs_db.items():
+        for cash_out in player_cash_outs:
+            if cash_out["confirmed"]:
+                player_name = players_db[player_id]["name"] if player_id in players_db else "Unknown"
+                confirmed_cash_outs.append({
+                    **cash_out,
+                    "player_name": player_name
+                })
+    return sorted(confirmed_cash_outs, key=lambda x: x["timestamp"], reverse=True)
