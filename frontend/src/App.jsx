@@ -841,7 +841,7 @@ return (
           pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
           value={pinInput}
           onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))} // Only allow 4 digits
-          onKeyDown={handlePinKeyPress}
+          onKeyPress={handlePinKeyPress}
           placeholder="••••"
           className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-xl text-white text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-400 tracking-widest"
           maxLength="4"
@@ -1101,7 +1101,7 @@ return (
   placeholder="Enter player name"
   value={playerName}
   onChange={(e) => setPlayerName(e.target.value)}
-  onKeyDown={handleKeyPress}
+  onKeyPress={handleKeyPress}
   disabled={loading}
   className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50"
   autoComplete="given-name" // 📱 MOBILE FIX: Better autocomplete
