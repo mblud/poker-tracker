@@ -519,3 +519,8 @@ async def get_cash_out_history():
                     "player_name": player_name
                 })
     return sorted(confirmed_cash_outs, key=lambda x: x["timestamp"], reverse=True)
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
