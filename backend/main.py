@@ -11,8 +11,8 @@ app = FastAPI(title="Poker Tracker API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Keep for local development
-   "https://poker-degens.vercel.app"  # NEW frontend URL
+        "http://localhost:5173",
+        "https://poker-degens.vercel.app"  # This needs to match exactly
     ],
     allow_credentials=True,
     allow_methods=["*"],
