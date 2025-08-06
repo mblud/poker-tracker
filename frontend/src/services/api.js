@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Base URL for your FastAPI backend
-const API_BASE_URL = 'https://poker-tracker-production.up.railway.app';
+const API_BASE_URL = 'https://degenpoker.up.railway.app';
 
 // Create an axios instance with default configuration
 const api = axios.create({
