@@ -9,8 +9,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-// ADD THIS SECTION:
-// Register Service Worker for PWA
+// KEEP SERVICE WORKER ACTIVE (now with better caching)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')

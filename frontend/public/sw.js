@@ -1,8 +1,8 @@
 // Enhanced Service Worker for Poker Tracker PWA
 console.log('Service Worker: Script loaded');
 
-const CACHE_NAME = 'poker-tracker-v1';
-const STATIC_CACHE = 'poker-static-v1';
+const CACHE_NAME = 'poker-tracker-v2'; // ← UPDATED VERSION!
+const STATIC_CACHE = 'poker-static-v2'; // ← UPDATED VERSION!
 
 // Files to cache for offline use
 const urlsToCache = [
@@ -22,8 +22,8 @@ self.addEventListener('install', (event) => {
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('Service Worker: Skip waiting');
-        return self.skipWaiting(); // Activate immediately
+        console.log('Service Worker: Skip waiting - force activation');
+        return self.skipWaiting(); // Force immediate activation
       })
   );
 });
@@ -45,13 +45,13 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      // Take control of all pages
+      // Take control of all pages immediately
       self.clients.claim()
     ])
   );
 });
 
-// Fetch event - handle requests (offline functionality)
+// Fetch event - handle requests (fixed for new assets)
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -88,8 +88,29 @@ self.addEventListener('fetch', (event) => {
           });
         })
     );
-  } else {
-    // Handle static files
+  } 
+  // Handle JavaScript/CSS assets with cache-first strategy
+  else if (url.pathname.startsWith('/assets/') || url.pathname.includes('.js') || url.pathname.includes('.css')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Always use fresh version for JS/CSS assets
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If offline, try cache as fallback
+          return caches.match(request);
+        })
+    );
+  }
+  // Handle everything else (HTML pages)
+  else {
     event.respondWith(
       caches.match(request)
         .then((response) => {
@@ -113,7 +134,6 @@ self.addEventListener('sync', (event) => {
   
   if (event.tag === 'background-sync') {
     event.waitUntil(
-      // You could sync pending rebuys here when connection returns
       syncPendingData()
     );
   }
@@ -180,10 +200,6 @@ self.addEventListener('notificationclick', (event) => {
 async function syncPendingData() {
   try {
     console.log('Service Worker: Syncing pending data...');
-    // This is where you'd sync any offline actions
-    // For now, just log that we're back online
-    
-    // You could store failed API calls in IndexedDB and retry them here
     return Promise.resolve();
   } catch (error) {
     console.error('Service Worker: Sync failed', error);
