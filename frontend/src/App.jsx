@@ -776,16 +776,21 @@ return (
                   <label className="block text-emerald-100 font-medium mb-2">
                     Cash Out Amount ($)
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={cashOutPlayer?.total}
-                    value={cashOutAmount}
-                    onChange={(e) => setCashOutAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="Enter amount"
-                  />
+                 
+<input
+  type="tel" // 📱 MOBILE FIX: Better than "number" on mobile
+  inputMode="decimal" // 📱 MOBILE FIX: Shows decimal keyboard with period
+  pattern="[0-9.]*" // 📱 MOBILE FIX: Allows decimals
+  min="0.01"
+  max={cashOutPlayer?.total}
+  value={cashOutAmount}
+  onChange={(e) => setCashOutAmount(e.target.value)}
+  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+  placeholder="Enter amount"
+  autoComplete="off"
+  autoCorrect="off"
+  spellCheck="false"
+/>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => setCashOutAmount((cashOutPlayer?.total / 2).toFixed(2))}
@@ -831,15 +836,20 @@ return (
                 <p className="text-emerald-200 mb-6">Enter PIN to access admin panel</p>
                 
                 <input
-                  type="password"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  onKeyPress={handlePinKeyPress}
-                  placeholder="Enter 4-digit PIN"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-400"
-                  maxLength="4"
-                  autoFocus
-                />
+          type="tel" // 📱 MOBILE FIX: Forces number keyboard
+          inputMode="numeric" // 📱 MOBILE FIX: iOS numeric keyboard
+          pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
+          value={pinInput}
+          onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))} // Only allow 4 digits
+          onKeyDown={handlePinKeyPress}
+          placeholder="••••"
+          className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-xl text-white text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-400 tracking-widest"
+          maxLength="4"
+          autoFocus
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+        />
 
                 <div className="flex gap-3 mt-6">
                   <button
@@ -859,10 +869,6 @@ return (
                     Access Admin
                   </button>
                 </div>
-
-                <p className="text-xs text-emerald-300 mt-4">
-                  Default PIN: 6969
-                </p>
               </div>
             </div>
           </div>
@@ -882,12 +888,17 @@ return (
                     Amount ($)
                   </label>
                   <input
-                    type="number"
-                    value={buyInAmount}
-                    onChange={(e) => setBuyInAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
+  type="tel" // 📱 MOBILE FIX: Better than "number" on mobile
+  inputMode="decimal" // 📱 MOBILE FIX: Shows decimal keyboard
+  pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
+  value={buyInAmount}
+  onChange={(e) => setBuyInAmount(e.target.value)}
+  placeholder="Enter amount"
+  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+  autoComplete="off"
+  autoCorrect="off"
+  spellCheck="false"
+/>
                   <div className="flex gap-2 mt-3">
                     {[100, 300, 500, 1000].map(amount => (
                       <button
@@ -1084,15 +1095,20 @@ return (
                   
                   <div className="bg-green-500/20 border border-green-400/30 rounded-xl p-4">
                     <div className="flex gap-4">
-                      <input
-                        type="text"
-                        placeholder="Enter player name"
-                        value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        disabled={loading}
-                        className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50"
-                      />
+                    <input
+  type="text"
+  inputMode="text" // 📱 MOBILE FIX: Ensures full keyboard
+  placeholder="Enter player name"
+  value={playerName}
+  onChange={(e) => setPlayerName(e.target.value)}
+  onKeyDown={handleKeyPress}
+  disabled={loading}
+  className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50"
+  autoComplete="given-name" // 📱 MOBILE FIX: Better autocomplete
+  autoCorrect="off"
+  spellCheck="false"
+  autoCapitalize="words" // 📱 MOBILE FIX: Capitalizes names
+/>
                       <button
                         onClick={addPlayer}
                         disabled={loading || !playerName.trim()}

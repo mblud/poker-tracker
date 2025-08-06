@@ -198,14 +198,20 @@ function RebuyForm() {
               </div>
 
               {/* Option 2: Create new player */}
-              <input
-                type="text"
-                value={selectedPlayer.startsWith('NEW:') ? selectedPlayer.substring(4) : ''}
-                onChange={(e) => setSelectedPlayer('NEW:' + e.target.value)}
-                placeholder="Enter your name (new player)"
-                className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg placeholder-gray-400 disabled:opacity-50"
-                disabled={loading}
-              />
+             
+<input
+  type="text"
+  inputMode="text" // 📱 MOBILE FIX: Ensures full keyboard
+  value={selectedPlayer.startsWith('NEW:') ? selectedPlayer.substring(4) : ''}
+  onChange={(e) => setSelectedPlayer('NEW:' + e.target.value)}
+  placeholder="Enter your name (new player)"
+  className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg placeholder-gray-400 disabled:opacity-50"
+  disabled={loading}
+  autoComplete="given-name" // 📱 MOBILE FIX: Better autocomplete
+  autoCorrect="off"
+  spellCheck="false"
+  autoCapitalize="words" // 📱 MOBILE FIX: Capitalizes names properly
+/>
               
               {selectedPlayer.startsWith('NEW:') && selectedPlayer.length > 4 && (
                 <p className="text-sm text-green-400 mt-3 p-3 bg-green-500/20 rounded-xl border border-green-400/30">
@@ -219,14 +225,20 @@ function RebuyForm() {
               <label className="block text-emerald-100 font-medium mb-3">
                  Amount ($)
               </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
-                className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg placeholder-gray-400 disabled:opacity-50"
-                disabled={loading}
-              />
+              
+<input
+  type="tel" // 📱 MOBILE FIX: Better than "number" on mobile
+  inputMode="decimal" // 📱 MOBILE FIX: Shows decimal keyboard
+  pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
+  value={amount}
+  onChange={(e) => setAmount(e.target.value)}
+  placeholder="Enter amount"
+  className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg placeholder-gray-400 disabled:opacity-50"
+  disabled={loading}
+  autoComplete="off"
+  autoCorrect="off"
+  spellCheck="false"
+/>
               
               {/* Quick Amount Buttons */}
               <div className="grid grid-cols-4 gap-3 mt-4">
