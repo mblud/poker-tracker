@@ -16,6 +16,8 @@ function PokerTracker() {
     total_buy_ins: 0,
     payment_method_breakdown: {}
   })
+  const [lastPaymentCount, setLastPaymentCount] = useState(0)
+const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   
   // Buy-in modal state
   const [showBuyInModal, setShowBuyInModal] = useState(false)
@@ -35,23 +37,26 @@ const [recentTransactions, setRecentTransactions] = useState([])
 const [showPinModal, setShowPinModal] = useState(false)
 const [pinInput, setPinInput] = useState('')
 const [adminPin] = useState('6969') // Host can change this
+const [pendingPayments, setPendingPayments] = useState([])
+const [showPendingCount, setShowPendingCount] = useState(0)
 
   // Keep ALL your existing functions (loadPlayers, loadGameStats, addPlayer, etc.)
 
   // Load players and game stats when component starts + polling
-useEffect(() => {
-  loadPlayers()
-  loadGameStats()
-  
-  // Set up polling every 5 seconds to auto-update the page
-  const interval = setInterval(() => {
+  useEffect(() => {
     loadPlayers()
     loadGameStats()
-  }, 5000) // Update every 5 seconds
-  
-  // Cleanup interval when component unmounts
-  return () => clearInterval(interval)
-}, [])
+    
+    // Set up polling every 5 seconds to auto-update the page
+    const interval = setInterval(() => {
+      loadPlayers()
+      loadGameStats()
+      checkForNewPayments() // ADD THIS LINE
+    }, 5000) // Update every 5 seconds
+    
+    // Cleanup interval when component unmounts
+    return () => clearInterval(interval)
+  }, [])
 
   // Polling for recent rebuys when QR modal is open
   useEffect(() => {
@@ -99,6 +104,34 @@ useEffect(() => {
       setRecentRebuys(response.data)
     } catch (err) {
       console.error('Error loading recent rebuys:', err)
+    }
+  }
+  // ADD THIS NEW FUNCTION RIGHT AFTER:
+  const checkForNewPayments = async () => {
+    try {
+      const response = await playerService.getRecentTransactions()
+      const currentPaymentCount = response.data.length
+      
+      // Initialize on first load (don't show notifications for existing payments)
+      if (lastPaymentCount === 0) {
+        setLastPaymentCount(currentPaymentCount)
+        return
+      }
+      
+      // Check for NEW payments (after first load)
+      if (currentPaymentCount > lastPaymentCount) {
+        const newPaymentCount = currentPaymentCount - lastPaymentCount
+        const newPayments = response.data.slice(0, newPaymentCount)
+        
+        // Show notification for each new payment
+        newPayments.forEach(payment => {
+          showPaymentNotification(payment.player_name, payment.amount, payment.method)
+        })
+        
+        setLastPaymentCount(currentPaymentCount)
+      }
+    } catch (err) {
+      console.error('Error checking for new payments:', err)
     }
   }
 
@@ -248,6 +281,7 @@ useEffect(() => {
       setShowPinModal(false)
       setShowAdminPanel(true)
       loadRecentTransactions()
+      loadPendingPayments()  // ADD THIS LINE
       setPinInput('')
     } else {
       alert('Incorrect PIN')
@@ -260,6 +294,65 @@ useEffect(() => {
       verifyPin()
     }
   }
+  // ADD THESE NEW FUNCTIONS:
+const loadPendingPayments = async () => {
+  try {
+    const response = await playerService.getPendingPayments()
+    setPendingPayments(response.data)
+    setShowPendingCount(response.data.length)
+  } catch (err) {
+    console.error('Error loading pending payments:', err)
+  }
+}
+
+const confirmPayment = async (playerId, paymentId, playerName, amount) => {
+  if (!confirm(`Confirm $${amount} payment from ${playerName}?\n\nThis means you received the money.`)) {
+    return
+  }
+  
+  try {
+    setLoading(true)
+    await playerService.confirmPayment(playerId, paymentId)
+    await loadPlayers()
+    await loadGameStats()
+    await loadPendingPayments()
+    await loadRecentTransactions()
+    setError('')
+  } catch (err) {
+    setError('Failed to confirm payment')
+    console.error('Error confirming payment:', err)
+  } finally {
+    setLoading(false)
+  }
+}
+  // ADD THESE NEW FUNCTIONS RIGHT AFTER:
+const requestNotificationPermission = async () => {
+  if ('Notification' in window) {
+    const permission = await Notification.requestPermission()
+    setNotificationsEnabled(permission === 'granted')
+    return permission === 'granted'
+  }
+  return false
+}
+
+const showPaymentNotification = (player_name, amount, method) => {
+  if (notificationsEnabled) {
+    new Notification(`💰 New Payment Request`, {
+      body: `${player_name} submitted $${amount} ${method} payment`,
+      icon: '🃏',
+      requireInteraction: true
+    })
+    
+    // Play audio alert
+    try {
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEASD0AAEg9AAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBy6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcF')
+      audio.volume = 0.3
+      audio.play()
+    } catch (e) {
+      console.log('Audio not supported')
+    }
+  }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-600 p-4">
@@ -268,7 +361,7 @@ useEffect(() => {
         <header className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2">🃏 Poker Tracker</h1>
           <p className="text-green-100 text-xl">Professional game management</p>
-        </header>
+</header>
 
      {/* Enhanced Game Stats */}
 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -285,21 +378,30 @@ useEffect(() => {
     <p className="text-2xl font-bold text-purple-600">${gameStats.total_buy_ins.toFixed(2)}</p>
   </div>
   <div className="card text-center">
-    <div className="space-y-2">
-      <button
-        onClick={openQRModal}
-        className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-sm"
-      >
-        📱 Player Buy-in/Rebuy
-      </button>
-      <button
-        onClick={openAdminPanel}
-        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 font-semibold text-sm"
-      >
-        ⚙️ Admin Panel
-      </button>
-    </div>
+  <div className="space-y-2">
+    <button
+      onClick={() => {
+        requestNotificationPermission()
+        alert('Host Mode: Notifications enabled!')
+      }}
+      className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-sm"
+    >
+      🔔 Enable Host Mode
+    </button>
+    <button
+      onClick={openQRModal}
+      className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-sm"
+    >
+      📱 Player Buy-in/Rebuy
+    </button>
+    <button
+      onClick={openAdminPanel}
+      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 font-semibold text-sm"
+    >
+      ⚙️ Admin Panel
+    </button>
   </div>
+</div>
 </div>
 
         {/* Payment Method Breakdown */}
@@ -609,51 +711,112 @@ useEffect(() => {
       </div>
 
       <div className="overflow-y-auto max-h-[60vh]">
+        {/* Pending Payments Section */}
+        <div className="mb-8">
+          <h4 className="text-lg font-semibold mb-4">
+            🟡 Pending Payments ({pendingPayments.length})
+          </h4>
+          
+          {pendingPayments.length === 0 ? (
+            <div className="text-center py-6 bg-green-50 border border-green-200 rounded-lg">
+              <span className="text-2xl">✅</span>
+              <p className="text-green-700 font-medium">All payments confirmed!</p>
+              <p className="text-green-600 text-sm">No pending payments to review</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingPayments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex justify-between items-center p-4 border border-yellow-300 rounded-lg bg-yellow-50"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-yellow-800">
+                      {payment.player_name} • ${payment.amount} {payment.method}
+                    </div>
+                    <div className="text-sm text-yellow-700">
+                      {payment.type === 'buy-in' ? '🎯 Buy-in' : '🔄 Rebuy'} • 
+                      {new Date(payment.timestamp).toLocaleString()}
+                      {payment.dealer_fee_applied && ' • $35 dealer fee applied'}
+                    </div>
+                    <div className="text-xs text-yellow-600 font-medium mt-1">
+                      ⏳ PENDING - Waiting for host confirmation
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-yellow-700">
+                      ${payment.amount}
+                    </span>
+                    <button
+                      onClick={() => confirmPayment(
+                        payment.player_id,
+                        payment.id,
+                        payment.player_name,
+                        payment.amount
+                      )}
+                      disabled={loading}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                    >
+                      ✅ Confirm Payment
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Recent Transactions Section */}
-        <h4 className="text-lg font-semibold mb-4">Recent Transactions</h4>
-        
-        {recentTransactions.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No transactions yet</p>
-        ) : (
-          <div className="space-y-3 mb-8">
-            {recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex justify-between items-center p-4 border border-gray-200 rounded-lg bg-gray-50"
-              >
-                <div className="flex-1">
-                  <div className="font-medium">{transaction.player_name}</div>
-                  <div className="text-sm text-gray-600">
-                    {transaction.type === 'buy-in' ? '🎯' : '🔄'} 
-                    {transaction.type} • ${transaction.amount} • {transaction.method}
+        <div className="border-t pt-6">
+          <h4 className="text-lg font-semibold mb-4">Recent Transactions</h4>
+          
+          {recentTransactions.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No transactions yet</p>
+          ) : (
+            <div className="space-y-3 mb-8">
+              {recentTransactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex justify-between items-center p-4 border border-gray-200 rounded-lg bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium flex items-center gap-2">
+                      {transaction.player_name}
+                      {transaction.status === 'confirmed' && <span className="text-green-600">✅</span>}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {transaction.type === 'buy-in' ? '🎯' : '🔄'} 
+                      {transaction.type} • ${transaction.amount} • {transaction.method}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(transaction.timestamp).toLocaleString()}
+                      {transaction.dealer_fee_applied && ' • $35 dealer fee applied'}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(transaction.timestamp).toLocaleString()}
-                    {transaction.dealer_fee_applied && ' • $35 dealer fee applied'}
+                  
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-green-600">
+                      ${transaction.amount}
+                    </span>
+                    <button
+                      onClick={() => deleteTransaction(
+                        transaction.player_id, 
+                        transaction.id, 
+                        transaction.player_name, 
+                        transaction.amount
+                      )}
+                      disabled={loading}
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm"
+                    >
+                      🗑️ Delete
+                    </button>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-green-600">
-                    ${transaction.amount}
-                  </span>
-                  <button
-                    onClick={() => deleteTransaction(
-                      transaction.player_id, 
-                      transaction.id, 
-                      transaction.player_name, 
-                      transaction.amount
-                    )}
-                    disabled={loading}
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Player Management Section */}
         <div className="border-t pt-6">
@@ -705,10 +868,11 @@ useEffect(() => {
       <div className="mt-6 pt-4 border-t">
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Showing last {recentTransactions.length} transactions • {players.length} players
+            {pendingPayments.length} pending • {recentTransactions.length} transactions • {players.length} players
           </div>
           <button
             onClick={() => {
+              loadPendingPayments()
               loadRecentTransactions()
               loadPlayers()
               loadGameStats()

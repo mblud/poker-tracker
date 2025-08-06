@@ -30,6 +30,9 @@ export const playerService = {
     deletePayment: (playerId, paymentId) => api.delete(`/api/players/${playerId}/payments/${paymentId}`),
       // NEW player deletion function
   deletePlayer: (playerId) => api.delete(`/api/players/${playerId}`),
+   // ADD THESE NEW METHODS:
+   confirmPayment: (playerId, paymentId) => api.put(`/api/players/${playerId}/payments/${paymentId}/confirm`),
+   getPendingPayments: () => api.get('/api/pending-payments'),
 }
 
 // Export the axios instance in case we need it elsewhere

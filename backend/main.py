@@ -40,6 +40,7 @@ class Payment(BaseModel):
     type: TransactionType
     dealer_fee_applied: bool
     timestamp: datetime
+    status: str = "pending" 
 
 class BuyInRequest(BaseModel):
     amount: float
@@ -110,14 +111,17 @@ def add_buyin(player_id: str, buyin_data: BuyInRequest):
         method=buyin_data.method,
         type=TransactionType.BUY_IN,
         dealer_fee_applied=dealer_fee_applied,
-        timestamp=datetime.now()
+        timestamp=datetime.now(),
+        status="pending"
     )
     
     # Update player
     player["payments"].append(new_payment.dict())
+    # ONLY COUNT CONFIRMED PAYMENTS IN PLAYER TOTAL
     player["total"] = sum(
         payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
         for payment in player["payments"]
+        if payment.get("status", "confirmed") == "confirmed"
     )
     
     players_db[player_id] = player
@@ -125,27 +129,32 @@ def add_buyin(player_id: str, buyin_data: BuyInRequest):
 
 @app.get("/api/game-stats")
 def get_game_stats():
-    total_pot = sum(player["total"] for player in players_db.values())
-    total_dealer_fees = sum(
-        DEALER_FEE for player in players_db.values()
-        for payment in player["payments"]
-        if payment["dealer_fee_applied"]
-    )
-    total_buy_ins = sum(
-        payment["amount"] for player in players_db.values()
-        for payment in player["payments"]
-    )
-    
-    # Calculate payment method breakdown
+    total_pot = 0
+    total_dealer_fees = 0
+    total_buy_ins = 0
     payment_method_totals = {}
+    
     for player in players_db.values():
         for payment in player["payments"]:
-            method = payment["method"]
-            amount = payment["amount"]
-            if method not in payment_method_totals:
-                payment_method_totals[method] = {"total": 0, "count": 0}
-            payment_method_totals[method]["total"] += amount
-            payment_method_totals[method]["count"] += 1
+            # ONLY COUNT CONFIRMED PAYMENTS
+            if payment.get("status", "confirmed") == "confirmed":
+                # Add to pot (minus dealer fee)
+                amount_to_pot = payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
+                total_pot += amount_to_pot
+                
+                # Count dealer fees
+                if payment["dealer_fee_applied"]:
+                    total_dealer_fees += DEALER_FEE
+                
+                # Count total buy-ins
+                total_buy_ins += payment["amount"]
+                
+                # Payment method breakdown
+                method = payment["method"]
+                if method not in payment_method_totals:
+                    payment_method_totals[method] = {"total": 0, "count": 0}
+                payment_method_totals[method]["total"] += payment["amount"]
+                payment_method_totals[method]["count"] += 1
     
     return {
         "total_pot": total_pot,
@@ -217,14 +226,17 @@ def process_rebuy(rebuy_data: RebuyRequest):
         method=rebuy_data.method,
         type=transaction_type,
         dealer_fee_applied=is_first_buyin,
-        timestamp=datetime.now()
+        timestamp=datetime.now(),
+        status="pending"
     )
     
     # Update player
     player["payments"].append(new_payment.dict())
+    # ONLY COUNT CONFIRMED PAYMENTS IN PLAYER TOTAL
     player["total"] = sum(
         payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
         for payment in player["payments"]
+        if payment.get("status", "confirmed") == "confirmed"
     )
     
     players_db[player_id] = player
@@ -261,6 +273,7 @@ def get_recent_rebuys():
     
     recent_rebuys.sort(key=lambda x: x["timestamp"], reverse=True)
     return recent_rebuys[:5]
+
 @app.delete("/api/players/{player_id}/payments/{payment_id}")
 def delete_payment(player_id: str, payment_id: str):
     if player_id not in players_db:
@@ -278,10 +291,11 @@ def delete_payment(player_id: str, payment_id: str):
     if not payment_to_remove:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    # Recalculate player total
+    # Recalculate player total - ONLY COUNT CONFIRMED PAYMENTS
     player["total"] = sum(
         payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
         for payment in player["payments"]
+        if payment.get("status", "confirmed") == "confirmed"
     )
     
     players_db[player_id] = player
@@ -301,12 +315,14 @@ def get_recent_transactions():
                 "method": payment["method"],
                 "type": payment["type"],
                 "dealer_fee_applied": payment["dealer_fee_applied"],
-                "timestamp": payment["timestamp"]
+                "timestamp": payment["timestamp"],
+                "status": payment.get("status", "confirmed")  # Include status
             })
     
     # Sort by timestamp, most recent first
     all_transactions.sort(key=lambda x: x["timestamp"], reverse=True)
     return all_transactions[:20]  # Return last 20 transactions
+
 @app.delete("/api/players/{player_id}")
 def delete_player(player_id: str):
     if player_id not in players_db:
@@ -324,3 +340,56 @@ def delete_player(player_id: str):
         "success": True, 
         "message": f"Deleted {player_name} (${player_total} removed from pot, {transaction_count} transactions deleted)"
     }
+
+@app.put("/api/players/{player_id}/payments/{payment_id}/confirm")
+def confirm_payment(player_id: str, payment_id: str):
+    if player_id not in players_db:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player = players_db[player_id]
+    
+    # Find the payment
+    payment_found = False
+    for payment in player["payments"]:
+        if payment["id"] == payment_id:
+            if payment.get("status", "confirmed") == "confirmed":
+                raise HTTPException(status_code=400, detail="Payment already confirmed")
+            
+            payment["status"] = "confirmed"
+            payment["confirmed_at"] = datetime.now().isoformat()
+            payment_found = True
+            break
+    
+    if not payment_found:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Recalculate player total after confirming payment
+    player["total"] = sum(
+        payment["amount"] - (DEALER_FEE if payment["dealer_fee_applied"] else 0)
+        for payment in player["payments"]
+        if payment.get("status", "confirmed") == "confirmed"
+    )
+    
+    players_db[player_id] = player
+    
+    return {
+        "success": True,
+        "message": f"Payment confirmed for {player['name']}"
+    }
+
+@app.get("/api/pending-payments")
+def get_pending_payments():
+    pending_payments = []
+    
+    for player_id, player in players_db.items():
+        for payment in player["payments"]:
+            if payment.get("status", "confirmed") == "pending":  # Default old payments to confirmed
+                pending_payments.append({
+                    **payment,
+                    "player_id": player_id,
+                    "player_name": player["name"]
+                })
+    
+    # Sort by timestamp (newest first)
+    pending_payments.sort(key=lambda x: x["timestamp"], reverse=True)
+    return pending_payments

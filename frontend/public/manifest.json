@@ -1,0 +1,16 @@
+{
+    "name": "Poker Tracker",
+    "short_name": "Poker",
+    "description": "Professional poker game management",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#16a34a",
+    "theme_color": "#16a34a",
+    "icons": [
+      {
+        "src": "/favicon.ico",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/x-icon"
+      }
+    ]
+  }
