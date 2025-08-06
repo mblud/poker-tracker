@@ -12,7 +12,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",  # Keep for local development
-        "https://poker-tracker-one.vercel.app"  # Add your Vercel URL
+   "https://poker-degens.vercel.app"  # NEW frontend URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
