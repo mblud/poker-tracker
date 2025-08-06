@@ -169,6 +169,29 @@ useEffect(() => {
       addPlayer()
     }
   }
+  const deletePlayer = async (playerId, playerName, playerTotal, transactionCount) => {
+    const confirmMessage = transactionCount > 0 
+      ? `DELETE PLAYER: ${playerName}?\n\n⚠️ This will remove:\n• Player: ${playerName}\n• ${transactionCount} transactions\n• $${playerTotal} from the pot\n\nThis cannot be undone!`
+      : `DELETE PLAYER: ${playerName}?\n\nPlayer has no transactions yet.\nThis cannot be undone!`
+      
+    if (!confirm(confirmMessage)) {
+      return
+    }
+    
+    try {
+      setLoading(true)
+      await playerService.deletePlayer(playerId)
+      await loadPlayers()
+      await loadGameStats()
+      await loadRecentTransactions()
+      setError('')
+    } catch (err) {
+      setError('Failed to delete player')
+      console.error('Error deleting player:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Helper function to format payment summary for each player
   const formatPaymentSummary = (player) => {
@@ -572,7 +595,7 @@ useEffect(() => {
         )}
 
         {/* Admin Panel Modal */}
-{showAdminPanel && (
+        {showAdminPanel && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-hidden">
       <div className="flex justify-between items-center mb-6">
@@ -586,12 +609,13 @@ useEffect(() => {
       </div>
 
       <div className="overflow-y-auto max-h-[60vh]">
+        {/* Recent Transactions Section */}
         <h4 className="text-lg font-semibold mb-4">Recent Transactions</h4>
         
         {recentTransactions.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No transactions yet</p>
+          <p className="text-gray-500 text-center py-4">No transactions yet</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 mb-8">
             {recentTransactions.map((transaction) => (
               <div
                 key={transaction.id}
@@ -630,12 +654,58 @@ useEffect(() => {
             ))}
           </div>
         )}
+
+        {/* Player Management Section */}
+        <div className="border-t pt-6">
+          <h4 className="text-lg font-semibold mb-4">🚨 Player Management</h4>
+          
+          {players.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No players in game</p>
+          ) : (
+            <div className="space-y-3">
+              {players.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex justify-between items-center p-4 border border-red-200 rounded-lg bg-red-50"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium">{player.name}</div>
+                    <div className="text-sm text-gray-600">
+                      ${player.total.toFixed(2)} in pot • {player.payments.length} transactions
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Added {new Date(player.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-green-600">
+                      ${player.total.toFixed(2)}
+                    </span>
+                    <button
+                      onClick={() => deletePlayer(
+                        player.id,
+                        player.name, 
+                        player.total.toFixed(2),
+                        player.payments.length
+                      )}
+                      disabled={loading}
+                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                    >
+                      🗑️ Delete Player
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 pt-4 border-t">
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Showing last {recentTransactions.length} transactions
+            Showing last {recentTransactions.length} transactions • {players.length} players
           </div>
           <button
             onClick={() => {

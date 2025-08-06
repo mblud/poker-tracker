@@ -307,3 +307,20 @@ def get_recent_transactions():
     # Sort by timestamp, most recent first
     all_transactions.sort(key=lambda x: x["timestamp"], reverse=True)
     return all_transactions[:20]  # Return last 20 transactions
+@app.delete("/api/players/{player_id}")
+def delete_player(player_id: str):
+    if player_id not in players_db:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    player = players_db[player_id]
+    player_name = player["name"]
+    player_total = player["total"]
+    transaction_count = len(player["payments"])
+    
+    # Remove the player
+    del players_db[player_id]
+    
+    return {
+        "success": True, 
+        "message": f"Deleted {player_name} (${player_total} removed from pot, {transaction_count} transactions deleted)"
+    }

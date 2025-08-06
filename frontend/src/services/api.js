@@ -28,6 +28,8 @@ export const playerService = {
     // NEW admin functions
     getRecentTransactions: () => api.get('/api/transactions/recent'),
     deletePayment: (playerId, paymentId) => api.delete(`/api/players/${playerId}/payments/${paymentId}`),
+      // NEW player deletion function
+  deletePlayer: (playerId) => api.delete(`/api/players/${playerId}`),
 }
 
 // Export the axios instance in case we need it elsewhere
