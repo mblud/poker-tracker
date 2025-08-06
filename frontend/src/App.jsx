@@ -9,6 +9,8 @@ function PokerTracker() {
   const [players, setPlayers] = useState([])
   const [playerName, setPlayerName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
+const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [error, setError] = useState('')
   const [gameStats, setGameStats] = useState({ 
     total_pot: 0, 
@@ -48,24 +50,35 @@ function PokerTracker() {
   // Generate QR code URL
   const rebuyUrl = `${window.location.origin}/rebuy`
 
-  // Load players and game stats when component starts + polling
-  useEffect(() => {
+ // Load players and game stats when component starts + polling
+useEffect(() => {
+  loadPlayers()
+  loadGameStats()
+  loadPendingPayments() // Load initially
+  loadPendingCashOuts() // Load initially
+  
+  // Set up polling every 5 seconds to auto-update the page
+  const interval = setInterval(() => {
     loadPlayers()
     loadGameStats()
-    loadPendingPayments() // Load initially
-    loadPendingCashOuts() // Load initially
-    
-    // Set up polling every 5 seconds to auto-update the page
-    const interval = setInterval(() => {
-      loadPlayers()
-      loadGameStats()
-      checkForNewPayments()
-      loadPendingPayments() // ADD THIS - poll for pending payments
-      loadPendingCashOuts()
-    }, 5000)
-    
-    return () => clearInterval(interval)
-  }, [])
+    checkForNewPayments()
+    loadPendingPayments() // ADD THIS - poll for pending payments
+    loadPendingCashOuts()
+  }, 5000)
+  
+  return () => clearInterval(interval)
+}, [])
+
+// Install prompt detection - SEPARATE useEffect
+useEffect(() => {
+  const handleBeforeInstallPrompt = (e) => {
+    e.preventDefault()
+    setInstallPrompt(e)
+    setShowInstallPrompt(true)
+  }
+  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+}, [])
 
   // Polling for recent rebuys when QR modal is open
   useEffect(() => {
@@ -188,6 +201,17 @@ function PokerTracker() {
   const closeQRModal = () => {
     setShowQRModal(false)
     setRecentRebuys([])
+  }
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt()
+      const { outcome } = await installPrompt.userChoice
+      if (outcome === 'accepted') {
+        setShowInstallPrompt(false)
+      }
+      setInstallPrompt(null)
+    }
   }
 
   const processBuyIn = async () => {
@@ -469,12 +493,36 @@ return (
           <div className="text-6xl animate-pulse">🃏</div>
           <div>
             <h1 className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-              Poker Tracker
+              Degen Poker
             </h1>
             <p className="text-emerald-100 text-lg md:text-xl font-light">Live Game Dashboard</p>
           </div>
         </div>
       </header>
+        {/* 🟢 ADD THIS INSTALL BANNER right after your header, before Hero Total Pot */}
+        {showInstallPrompt && (
+          <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 border border-blue-400/30 shadow-lg">
+            <div className="text-center">
+              <div className="text-2xl mb-2">📱</div>
+              <p className="text-white font-bold mb-2">Install Poker Tracker</p>
+              <p className="text-blue-100 text-sm mb-4">Add to your home screen for quick access!</p>
+              <div className="flex gap-3 justify-center">
+                <button 
+                  onClick={handleInstallClick}
+                  className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold hover:bg-blue-50 transition-colors"
+                >
+                  Install App
+                </button>
+                <button 
+                  onClick={() => setShowInstallPrompt(false)}
+                  className="text-blue-100 hover:text-white px-4 py-2 transition-colors"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Hero Total Pot Section - BIGGEST AND MOST BEAUTIFUL */}
       <div className="mb-8">

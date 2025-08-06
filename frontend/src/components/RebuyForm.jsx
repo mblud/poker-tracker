@@ -157,9 +157,9 @@ function RebuyForm() {
             <div className="text-5xl animate-pulse">🃏</div>
             <div>
               <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-                Rebuy
+                Buy Chips
               </h1>
-              <p className="text-emerald-100 text-lg font-light">Quick and easy poker rebuy</p>
+              <p className="text-emerald-100 text-lg font-light">Get off the sidelines, fucker.</p>
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ function RebuyForm() {
             {/* Amount Input */}
             <div>
               <label className="block text-emerald-100 font-medium mb-3">
-                Rebuy Amount ($)
+                 Amount ($)
               </label>
               <input
                 type="number"
