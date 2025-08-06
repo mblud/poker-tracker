@@ -251,19 +251,46 @@ useEffect(() => {
 
   const processCashOut = async () => {
     if (!cashOutAmount || !cashOutPlayer) return
-
+  
+    const amount = parseFloat(cashOutAmount)
+    
+    // 🎯 NEW VALIDATION: Players can cash out up to the TOTAL POT (they can win!)
+    if (amount <= 0) {
+      setError('Cash out amount must be positive')
+      return
+    }
+    
+    // 🚀 POKER LOGIC: Players can win more than they put in, so limit to total pot
+    if (amount > gameStats.total_pot) {
+      setError(`Cannot cash out $${amount.toFixed(2)}. Total pot only has $${gameStats.total_pot.toFixed(2)}.`)
+      return
+    }
+    
+    // ✅ Optional warning if they're cashing out more than they put in
+    if (amount > cashOutPlayer.total) {
+      const extraAmount = amount - cashOutPlayer.total
+      if (!confirm(`${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in. This means they won money! Continue?`)) {
+        return
+      }
+    }
+  
     try {
       setLoading(true)
       await playerService.createCashOut(cashOutPlayer.id, {
-        amount: parseFloat(cashOutAmount),
+        amount: amount,
         reason: "Player cashed out"
       })
       
+      // 🔊 Enhanced notification with sound for cash outs
       if (notificationsEnabled) {
-        new Notification(`💰 Cash Out Request`, {
-          body: `${cashOutPlayer.name} wants to cash out $${cashOutAmount}`,
-          icon: '🃏'
+        new Notification(`💰 Cash Out Request!`, {
+          body: `${cashOutPlayer.name} wants to cash out $${amount.toFixed(2)}`,
+          icon: '🃏',
+          vibrate: [300, 100, 300, 100, 300], // Different pattern for cash outs
+          tag: 'poker-cashout',
+          requireInteraction: true
         })
+        playNotificationSound()
       }
       
       await loadPlayers()
@@ -272,7 +299,7 @@ useEffect(() => {
       closeCashOutModal()
       setError('')
     } catch (err) {
-      setError('Failed to process cash out')
+      setError('Failed to process cash out: ' + err.message)
       console.error('Error processing cash out:', err)
     } finally {
       setLoading(false)
@@ -757,8 +784,8 @@ return (
           </div>
         )}
 
-        {/* Enhanced Cash Out Modal */}
-        {showCashOutModal && (
+      {/* Enhanced Cash Out Modal */}
+      {showCashOutModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
               <h3 className="text-2xl font-bold text-white mb-4">
@@ -767,7 +794,11 @@ return (
               
               <div className="mb-4 p-4 bg-blue-500/20 rounded-xl border border-blue-400/30">
                 <p className="text-blue-200">
-                  Available to cash out: <span className="font-bold text-white">${cashOutPlayer?.total?.toFixed(2) || '0.00'}</span>
+                  Player has: <span className="font-bold text-white">${cashOutPlayer?.total?.toFixed(2) || '0.00'}</span> in pot
+                  <br />
+                  Total pot available: <span className="font-bold text-green-300">${gameStats.total_pot?.toFixed(2) || '0.00'}</span>
+                  <br />
+                  <span className="text-xs text-blue-300">Players can cash out winnings up to total pot amount</span>
                 </p>
               </div>
 
@@ -777,32 +808,39 @@ return (
                     Cash Out Amount ($)
                   </label>
                  
-<input
-  type="tel" // 📱 MOBILE FIX: Better than "number" on mobile
-  inputMode="decimal" // 📱 MOBILE FIX: Shows decimal keyboard with period
-  pattern="[0-9.]*" // 📱 MOBILE FIX: Allows decimals
-  min="0.01"
-  max={cashOutPlayer?.total}
-  value={cashOutAmount}
-  onChange={(e) => setCashOutAmount(e.target.value)}
-  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-  placeholder="Enter amount"
-  autoComplete="off"
-  autoCorrect="off"
-  spellCheck="false"
-/>
+                  <input
+                    type="tel"
+                    inputMode="decimal"
+                    pattern="[0-9.]*"
+                    min="0.01"
+                    max={gameStats.total_pot}
+                    value={cashOutAmount}
+                    onChange={(e) => setCashOutAmount(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Enter amount"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                  
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => setCashOutAmount((cashOutPlayer?.total / 2).toFixed(2))}
                       className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
                     >
-                      Half (${((cashOutPlayer?.total || 0) / 2).toFixed(2)})
+                      Half Buy-in (${((cashOutPlayer?.total || 0) / 2).toFixed(2)})
                     </button>
                     <button
                       onClick={() => setCashOutAmount(cashOutPlayer?.total?.toString() || '0')}
                       className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
                     >
-                      All (${cashOutPlayer?.total?.toFixed(2) || '0.00'})
+                      All Buy-in (${cashOutPlayer?.total?.toFixed(2) || '0.00'})
+                    </button>
+                    <button
+                      onClick={() => setCashOutAmount(gameStats.total_pot?.toString() || '0')}
+                      className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm transition-colors border border-green-400/30"
+                    >
+                      Max Win (${gameStats.total_pot?.toFixed(2) || '0.00'})
                     </button>
                   </div>
                 </div>
