@@ -1,75 +1,44 @@
-// 🔥 COMPLETE SERVICE WORKER FIX - NO MORE CACHE ERRORS!
-console.log('Service Worker: FIXED VERSION Loading');
+// public/sw.js
+const SW_VERSION = 'v2025-08-06';
+const STATIC_CACHE = `static-${SW_VERSION}`;
 
-const CACHE_NAME = 'poker-tracker-v100'; // 🚨 HIGH VERSION TO FORCE UPDATE
-const STATIC_CACHE = 'poker-static-v100';
-
-// Only cache these specific files
-const urlsToCache = [
-  '/',
-  '/manifest.json'
-];
-
+// Immediately take control on update
 self.addEventListener('install', (event) => {
-  console.log('🔥 Service Worker: INSTALLING FIXED VERSION');
-  
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('✅ Service Worker: Caching basic files only');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('🚀 Service Worker: FORCING IMMEDIATE ACTIVATION');
-        return self.skipWaiting();
-      })
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker: ACTIVATED - CLEARING ALL OLD CACHES');
-  
   event.waitUntil(
-    Promise.all([
-      // 🔥 DELETE ALL OLD CACHES
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            console.log('🗑️ Deleting cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-        );
-      }),
-      // Take control immediately
-      self.clients.claim()
-    ])
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== STATIC_CACHE).map(k => caches.delete(k)))
+    )
   );
+  self.clients.claim();
 });
 
-// 🚨 CRITICAL FIX: DO NOT INTERCEPT ANY API CALLS!
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
-  // 🔥 NEVER TOUCH API CALLS - LET THEM GO DIRECTLY TO NETWORK
-  if (url.pathname.startsWith('/api/') || 
-      url.pathname.includes('cashout') || 
-      url.pathname.includes('payment') ||
-      request.method !== 'GET') {
-    console.log('🚫 Service Worker: IGNORING API CALL:', url.pathname);
-    return; // Let it go directly to network - NO CACHING!
-  }
-  
-  // Only handle basic navigation (HTML pages)
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match('/');
-      })
-    );
-  }
-  
-  // For everything else, just let it pass through
-});
 
-console.log('✅ Service Worker: FIXED VERSION LOADED - NO MORE CACHE ERRORS!');
+  // Never cache non-GET requests or any API calls
+  const isAPI =
+    url.pathname.startsWith('/api') ||
+    url.origin.includes('up.railway.app'); // your FastAPI origin
+  if (request.method !== 'GET' || isAPI) {
+    return; // Let the network handle it
+  }
+
+  // Stale-while-revalidate for static assets only
+  event.respondWith(
+    caches.open(STATIC_CACHE).then(async (cache) => {
+      const cached = await cache.match(request);
+      const network = fetch(request).then((response) => {
+        if (response.ok && response.type !== 'opaque') {
+          cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || network;
+    })
+  );
+});
