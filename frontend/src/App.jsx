@@ -249,62 +249,118 @@ useEffect(() => {
     setCashOutAmount('')
   }
 
-  const processCashOut = async () => {
-    if (!cashOutAmount || !cashOutPlayer) return
+// 🔥 REPLACE YOUR processCashOut FUNCTION WITH THIS:
+
+const processCashOut = async () => {
+  console.log('🔍 DEBUG: Starting cash out process');
+  console.log('💰 Cash out amount:', cashOutAmount);
+  console.log('👤 Cash out player:', cashOutPlayer);
+  console.log('🎯 Game stats:', gameStats);
   
-    const amount = parseFloat(cashOutAmount)
-    
-    // 🎯 NEW VALIDATION: Players can cash out up to the TOTAL POT (they can win!)
-    if (amount <= 0) {
-      setError('Cash out amount must be positive')
-      return
-    }
-    
-    // 🚀 POKER LOGIC: Players can win more than they put in, so limit to total pot
-    if (amount > gameStats.total_pot) {
-      setError(`Cannot cash out $${amount.toFixed(2)}. Total pot only has $${gameStats.total_pot.toFixed(2)}.`)
-      return
-    }
-    
-    // ✅ Optional warning if they're cashing out more than they put in
-    if (amount > cashOutPlayer.total) {
-      const extraAmount = amount - cashOutPlayer.total
-      if (!confirm(`${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in. This means they won money! Continue?`)) {
-        return
-      }
-    }
+  if (!cashOutAmount || !cashOutPlayer) {
+    console.log('❌ Missing data');
+    setError('Please enter a valid amount');
+    return;
+  }
+
+  const amount = parseFloat(cashOutAmount);
+  console.log('💵 Parsed amount:', amount);
   
-    try {
-      setLoading(true)
-      await playerService.createCashOut(cashOutPlayer.id, {
-        amount: amount,
-        reason: "Player cashed out"
-      })
-      
-      // 🔊 Enhanced notification with sound for cash outs
-      if (notificationsEnabled) {
+  // Basic validation
+  if (amount <= 0 || isNaN(amount)) {
+    setError('Cash out amount must be a positive number');
+    return;
+  }
+  
+  // 🚀 POKER LOGIC: Players can cash out up to total pot
+  const totalPot = gameStats.total_pot || 0;
+  console.log('🎯 Total pot available:', totalPot);
+  
+  if (amount > totalPot) {
+    const errorMsg = `Cannot cash out $${amount.toFixed(2)}. Total pot only has $${totalPot.toFixed(2)}.`;
+    console.log('❌ Amount exceeds pot:', errorMsg);
+    setError(errorMsg);
+    return;
+  }
+  
+  // Optional warning if they're cashing out more than they put in (they're winning!)
+  if (amount > cashOutPlayer.total) {
+    const extraAmount = amount - cashOutPlayer.total;
+    const confirmMsg = `${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in. This means they won money! Continue?`;
+    console.log('🎉 Player winning money:', confirmMsg);
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+  }
+
+  try {
+    setLoading(true);
+    setError(''); // Clear any previous errors
+    
+    console.log('🚀 Sending cash out request to API...');
+    console.log('📡 Request data:', {
+      playerId: cashOutPlayer.id,
+      amount: amount,
+      reason: "Player cashed out"
+    });
+    
+    const response = await playerService.createCashOut(cashOutPlayer.id, {
+      amount: amount,
+      reason: "Player cashed out"
+    });
+    
+    console.log('✅ Cash out API response:', response.data);
+    
+    // Show success notification
+    if (notificationsEnabled) {
+      try {
         new Notification(`💰 Cash Out Request!`, {
           body: `${cashOutPlayer.name} wants to cash out $${amount.toFixed(2)}`,
           icon: '🃏',
-          vibrate: [300, 100, 300, 100, 300], // Different pattern for cash outs
+          vibrate: [300, 100, 300, 100, 300],
           tag: 'poker-cashout',
           requireInteraction: true
-        })
-        playNotificationSound()
+        });
+      } catch (notifError) {
+        console.log('Notification failed:', notifError);
       }
-      
-      await loadPlayers()
-      await loadGameStats()
-      await loadPendingCashOuts()
-      closeCashOutModal()
-      setError('')
-    } catch (err) {
-      setError('Failed to process cash out: ' + err.message)
-      console.error('Error processing cash out:', err)
-    } finally {
-      setLoading(false)
     }
+    
+    // Refresh all data
+    console.log('🔄 Refreshing game data...');
+    await Promise.all([
+      loadPlayers(),
+      loadGameStats(),
+      loadPendingCashOuts()
+    ]);
+    
+    closeCashOutModal();
+    console.log('✅ Cash out completed successfully');
+    
+  } catch (err) {
+    console.error('❌ FULL CASH OUT ERROR:', err);
+    console.error('❌ Error response:', err.response);
+    console.error('❌ Error data:', err.response?.data);
+    console.error('❌ Error status:', err.response?.status);
+    
+    let errorMsg = 'Failed to process cash out';
+    
+    if (err.response?.data?.detail) {
+      errorMsg = err.response.data.detail;
+    } else if (err.response?.status === 400) {
+      errorMsg = 'Invalid cash out amount or request';
+    } else if (err.response?.status === 404) {
+      errorMsg = 'Player not found';
+    } else if (err.message) {
+      errorMsg = `Error: ${err.message}`;
+    }
+    
+    console.error('❌ Final error message:', errorMsg);
+    setError(errorMsg);
+  } finally {
+    setLoading(false);
   }
+};
 
   const confirmCashOut = async (cashOutId, playerName, amount) => {
     if (!confirm(`Confirm $${amount} cash out for ${playerName}?\n\nThis means you gave them the money.`)) {
@@ -784,86 +840,99 @@ return (
           </div>
         )}
 
-      {/* Enhanced Cash Out Modal */}
-      {showCashOutModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
-              <h3 className="text-2xl font-bold text-white mb-4">
-                Cash Out - {cashOutPlayer?.name}
-              </h3>
-              
-              <div className="mb-4 p-4 bg-blue-500/20 rounded-xl border border-blue-400/30">
-                <p className="text-blue-200">
-                  Player has: <span className="font-bold text-white">${cashOutPlayer?.total?.toFixed(2) || '0.00'}</span> in pot
-                  <br />
-                  Total pot available: <span className="font-bold text-green-300">${gameStats.total_pot?.toFixed(2) || '0.00'}</span>
-                  <br />
-                  <span className="text-xs text-blue-300">Players can cash out winnings up to total pot amount</span>
-                </p>
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-emerald-100 font-medium mb-2">
-                    Cash Out Amount ($)
-                  </label>
-                 
-                  <input
-                    type="tel"
-                    inputMode="decimal"
-                    pattern="[0-9.]*"
-                    min="0.01"
-                    max={gameStats.total_pot}
-                    value={cashOutAmount}
-                    onChange={(e) => setCashOutAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="Enter amount"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck="false"
-                  />
-                  
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => setCashOutAmount((cashOutPlayer?.total / 2).toFixed(2))}
-                      className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
-                    >
-                      Half Buy-in (${((cashOutPlayer?.total || 0) / 2).toFixed(2)})
-                    </button>
-                    <button
-                      onClick={() => setCashOutAmount(cashOutPlayer?.total?.toString() || '0')}
-                      className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
-                    >
-                      All Buy-in (${cashOutPlayer?.total?.toFixed(2) || '0.00'})
-                    </button>
-                    <button
-                      onClick={() => setCashOutAmount(gameStats.total_pot?.toString() || '0')}
-                      className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm transition-colors border border-green-400/30"
-                    >
-                      Max Win (${gameStats.total_pot?.toFixed(2) || '0.00'})
-                    </button>
-                  </div>
-                </div>
-              </div>
+{/* 🔥 REPLACE YOUR CASH OUT MODAL WITH THIS FIXED VERSION */}
+{showCashOutModal && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
+      <h3 className="text-2xl font-bold text-white mb-4">
+        Cash Out - {cashOutPlayer?.name}
+      </h3>
+      
+      <div className="mb-4 p-4 bg-blue-500/20 rounded-xl border border-blue-400/30">
+        <p className="text-blue-200">
+          Player has: <span className="font-bold text-white">${cashOutPlayer?.total?.toFixed(2) || '0.00'}</span> in pot
+          <br />
+          Total pot available: <span className="font-bold text-green-300">${gameStats.total_pot?.toFixed(2) || '0.00'}</span>
+          <br />
+          <span className="text-xs text-blue-300">🎉 Players can cash out winnings up to total pot amount</span>
+        </p>
+      </div>
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={closeCashOutModal}
-                  className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={processCashOut}
-                  disabled={!cashOutAmount || loading}
-                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
-                >
-                  {loading ? 'Processing...' : 'Cash Out'}
-                </button>
-              </div>
-            </div>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-emerald-100 font-medium mb-2">
+            Cash Out Amount ($)
+          </label>
+         
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            max={gameStats.total_pot || 0}
+            value={cashOutAmount}
+            onChange={(e) => setCashOutAmount(e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            placeholder="Enter amount"
+          />
+          
+          <div className="flex gap-2 mt-3 flex-wrap">
+            <button
+              onClick={() => setCashOutAmount((cashOutPlayer?.total / 2).toFixed(2))}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
+            >
+              Half (${((cashOutPlayer?.total || 0) / 2).toFixed(2)})
+            </button>
+            <button
+              onClick={() => setCashOutAmount(cashOutPlayer?.total?.toFixed(2) || '0')}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
+            >
+              All In (${cashOutPlayer?.total?.toFixed(2) || '0.00'})
+            </button>
+            <button
+              onClick={() => setCashOutAmount((gameStats.total_pot || 0).toFixed(2))}
+              className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm transition-colors border border-green-400/30"
+            >
+              🏆 MAX WIN (${(gameStats.total_pot || 0).toFixed(2)})
+            </button>
           </div>
-        )}
+          
+          {/* Show warning if cashing out more than they put in */}
+          {cashOutAmount && parseFloat(cashOutAmount) > (cashOutPlayer?.total || 0) && (
+            <div className="mt-3 p-3 bg-yellow-500/20 border border-yellow-400/30 rounded-xl">
+              <p className="text-yellow-200 text-sm">
+                🎉 <strong>WINNER!</strong> Cashing out ${(parseFloat(cashOutAmount) - (cashOutPlayer?.total || 0)).toFixed(2)} more than invested!
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-3 mt-6">
+        <button
+          onClick={closeCashOutModal}
+          className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={processCashOut}
+          disabled={!cashOutAmount || loading || parseFloat(cashOutAmount) > (gameStats.total_pot || 0)}
+          className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
+        >
+          {loading ? 'Processing...' : 'Cash Out'}
+        </button>
+      </div>
+      
+      {/* Debug info - remove this after testing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-2 bg-gray-800 rounded text-xs text-gray-300">
+          Debug: Player=${cashOutPlayer?.total}, Pot=${gameStats.total_pot}, Amount=${cashOutAmount}
+        </div>
+      )}
+    </div>
+  </div>
+)}
 
         {/* Enhanced PIN Modal */}
         {showPinModal && (
