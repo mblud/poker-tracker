@@ -438,18 +438,21 @@ function PokerTracker() {
 
   const formatPaymentSummary = (player) => {
     const summary = {}
+    const transactions = []
+    
     player.payments.forEach(payment => {
       const method = payment.method
       if (!summary[method]) {
-        summary[method] = { total: 0, count: 0 }
+        summary[method] = { total: 0, count: 0, amounts: [] }
       }
       summary[method].total += payment.amount
       summary[method].count += 1
+      summary[method].amounts.push(payment.amount)
+      transactions.push({ method, amount: payment.amount })
     })
 
-    return Object.entries(summary).map(([method, data]) => 
-      `${data.count} ${method} ($${data.total.toFixed(0)})`
-    ).join(', ')
+    // Return individual transactions
+    return transactions.map(t => `${t.method}: ${t.amount}`).join(' • ')
   }
 
   const loadRecentTransactions = async () => {
@@ -633,61 +636,103 @@ function PokerTracker() {
           </div>
         )}
 
-        {/* Hero Total Pot Section */}
+        {/* Hero Total Pot Section - ENHANCED DESIGN */}
         <div className="mb-8">
-          <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-8 shadow-2xl border border-green-400/20 overflow-hidden">
+          <div className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-green-600 rounded-3xl p-8 shadow-2xl border border-green-400/20 overflow-hidden">
+            {/* Premium glass effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
             {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20 blur-xl"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-16 -translate-x-16 blur-xl"></div>
             
             <div className="relative text-center">
-              <p className="text-green-100 text-lg md:text-xl font-medium mb-2">💰 Total Pot</p>
-              <p className="text-6xl md:text-7xl font-black text-white mb-2 tracking-tight">
-                ${gameStats.total_pot?.toLocaleString('en-US', {minimumFractionDigits: 2}) || '0.00'}
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="text-3xl">💰</span>
+                <p className="text-green-100 text-xl font-semibold uppercase tracking-wider">Total Pot</p>
+              </div>
+              <p className="text-7xl md:text-8xl font-black text-white mb-3 tracking-tight drop-shadow-lg">
+                ${gameStats.total_pot?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
               </p>
-              <p className="text-green-100/80 text-sm">
-                {activePlayers.length} active players • ${gameStats.total_dealer_fees?.toFixed(0) || '0'} in fees
-              </p>
+              <div className="flex items-center justify-center gap-4 text-green-100/90">
+                <span className="flex items-center gap-1">
+                  <span className="text-lg">👥</span>
+                  <span className="font-medium">{activePlayers.length} active</span>
+                </span>
+                <span className="text-green-200/50">•</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-lg">💵</span>
+                  <span className="font-medium">${gameStats.total_dealer_fees?.toFixed(0) || '0'} dealer fees</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Compact Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-            <p className="text-emerald-100 text-sm font-medium mb-1">💸 Cash Outs</p>
-            <p className="text-xl font-bold text-red-300">-${gameStats.total_cash_outs?.toFixed(0) || '0'}</p>
+        {/* Compact Stats Grid - CLEANER DESIGN */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 backdrop-blur-sm rounded-2xl p-5 border border-red-400/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-200 text-sm font-medium mb-1 uppercase tracking-wide">Cash Outs</p>
+                <p className="text-2xl font-bold text-red-300">-${gameStats.total_cash_outs?.toFixed(0) || '0'}</p>
+              </div>
+              <span className="text-3xl opacity-50">💸</span>
+            </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-            <p className="text-emerald-100 text-sm font-medium mb-1">🎯 Dealer Fees</p>
-            <p className="text-xl font-bold text-purple-300">${gameStats.total_dealer_fees?.toFixed(0) || '0'}</p>
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 backdrop-blur-sm rounded-2xl p-5 border border-purple-400/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-200 text-sm font-medium mb-1 uppercase tracking-wide">Dealer Fees</p>
+                <p className="text-2xl font-bold text-purple-300">${gameStats.total_dealer_fees?.toFixed(0) || '0'}</p>
+              </div>
+              <span className="text-3xl opacity-50">🎯</span>
+            </div>
           </div>
         </div>
 
-        {/* 🔥 UPDATED: Pot Breakdown (shows money IN and OUT by method) */}
+        {/* Payment Method Breakdown - CLEANER WITHOUT PERCENTAGES */}
         {paymentMethodsWithPercentage.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
-            <h3 className="text-lg font-bold text-white mb-4 text-center">💰 Pot Breakdown by Payment Method</h3>
-            <div className="space-y-3">
+          <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-5">
+              <span className="text-2xl">💳</span>
+              <h3 className="text-lg font-bold text-white uppercase tracking-wide">Payment Breakdown</h3>
+            </div>
+            <div className="space-y-4">
               {paymentMethodsWithPercentage.map(({ method, total, count, percentage }) => (
-                <div key={method} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-emerald-100 font-medium text-sm">{method}</span>
-                    <span className="text-white font-bold">${total?.toFixed(0) || '0'}</span>
+                <div key={method} className="relative">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-lg ${
+                        method === 'Cash' ? '💵' :
+                        method === 'Apple Pay' ? '📱' :
+                        method === 'Venmo' ? '💜' :
+                        method === 'Zelle' ? '💙' : '💳'
+                      }`}>{
+                        method === 'Cash' ? '💵' :
+                        method === 'Apple Pay' ? '📱' :
+                        method === 'Venmo' ? '💜' :
+                        method === 'Zelle' ? '💙' : '💳'
+                      }</span>
+                      <div>
+                        <span className="text-white font-semibold text-sm">{method}</span>
+                        <span className="text-emerald-200 text-xs ml-2">({count} payments)</span>
+                      </div>
+                    </div>
+                    <span className={`text-lg font-bold ${total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${Math.abs(total).toFixed(0)}
+                    </span>
                   </div>
-                  <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-black/30 rounded-full h-2.5 overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all duration-1000 ease-out ${
                         method === 'Apple Pay' ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
                         method === 'Cash' ? 'bg-gradient-to-r from-green-400 to-green-500' :
                         method === 'Venmo' ? 'bg-gradient-to-r from-purple-400 to-purple-500' :
+                        method === 'Zelle' ? 'bg-gradient-to-r from-indigo-400 to-indigo-500' :
                         'bg-gradient-to-r from-gray-400 to-gray-500'
                       }`}
-                      style={{ width: `${percentage}%` }}
+                      style={{ width: `${Math.max(5, percentage)}%` }}
                     ></div>
-                  </div>
-                  <div className="text-xs text-emerald-200">
-                    {count} payments • {percentage.toFixed(1)}%
                   </div>
                 </div>
               ))}
@@ -733,17 +778,20 @@ function PokerTracker() {
           </div>
         )}
 
-        {/* 🔥 FIXED: ACTIVE PLAYERS with "committed" instead of "in pot" */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
+        {/* ACTIVE PLAYERS - ENHANCED DESIGN */}
+        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-white mb-2">🏆 Active Players</h2>
-            <p className="text-emerald-200">({activePlayers.length} players with chips)</p>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-3xl">🏆</span>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-wide">Active Players</h2>
+            </div>
+            <p className="text-emerald-200 text-sm">({activePlayers.length} players with chips)</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {loading && players.length === 0 && (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto"></div>
                 <p className="text-emerald-200 mt-2">Loading game...</p>
               </div>
             )}
@@ -753,54 +801,56 @@ function PokerTracker() {
               .map((player, index) => (
               <div
                 key={player.id}
-                className={`rounded-2xl p-4 transition-all duration-300 border ${
+                className={`rounded-2xl p-5 transition-all duration-300 border ${
                   index === 0 && activePlayers.length > 1 
                     ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border-yellow-400/40 shadow-lg' 
                     : 'bg-white/5 border-white/20 hover:bg-white/10'
                 }`}
               >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`text-xl font-bold w-6 text-center ${
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`text-2xl font-black w-8 text-center ${
                       index === 0 && activePlayers.length > 1 ? 'text-yellow-400' : 'text-emerald-300'
                     }`}>
                       {index + 1}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-white">{player.name}</span>
-                        {index === 0 && activePlayers.length > 1 && <span className="text-yellow-400">👑</span>}
-                      </div>
-                      <div className="text-sm text-emerald-200">
-                        {player.payments?.length > 0 ? (
-                          <>
-                            <div>💳 {formatPaymentSummary(player)}</div>
-                            <div>📊 {player.payments.length} transactions</div>
-                          </>
-                        ) : (
-                          <div className="text-emerald-300">No money added yet</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl font-bold text-white">{player.name}</span>
+                        {index === 0 && activePlayers.length > 1 && (
+                          <span className="text-yellow-400 animate-pulse">👑</span>
                         )}
                       </div>
+                      {player.payments?.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="text-sm text-emerald-200">
+                            <span className="text-emerald-400 font-medium">Transactions:</span>
+                          </div>
+                          <div className="text-xs text-emerald-300 bg-black/20 rounded-lg p-2">
+                            {formatPaymentSummary(player)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-xl font-bold ${
+                    <div className={`text-2xl font-bold ${
                       player.total > 0 ? 'text-green-400' : 'text-gray-400'
                     }`}>
                       ${player.total?.toFixed(0) || '0'}
                     </div>
-                    {/* 🔥 FIXED: Changed from "in pot" to "committed" */}
-                    <div className="text-xs text-emerald-200">committed</div>
+                    <div className="text-xs text-emerald-200 uppercase tracking-wide">committed</div>
                   </div>
                 </div>
                 
-                {/* Cash out button for active players */}
+                {/* Cash out button - cleaner design */}
                 {player.total > 0 && (
                   <button
                     onClick={() => openCashOutModal(player)}
-                    className="w-full py-2 px-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all duration-200 text-xs font-medium border border-red-400/30"
+                    className="w-full py-2.5 px-4 bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 text-red-300 hover:text-red-200 rounded-xl transition-all duration-200 text-sm font-semibold border border-red-400/30 flex items-center justify-center gap-2"
                   >
-                    💰 Cash Out
+                    <span>💰</span>
+                    <span>Cash Out</span>
                   </button>
                 )}
               </div>
