@@ -79,13 +79,23 @@ function PokerTracker() {
 
   // Install prompt detection - SEPARATE useEffect
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault()
-      setInstallPrompt(e)
+    // Check if iOS/Safari and not already installed
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches
+    
+    if (isIOS && !isStandalone) {
+      // Show install prompt for iOS users who haven't installed yet
       setShowInstallPrompt(true)
+    } else {
+      // For Android/Desktop, wait for browser prompt
+      const handleBeforeInstallPrompt = (e) => {
+        e.preventDefault()
+        setInstallPrompt(e)
+        setShowInstallPrompt(true)
+      }
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     }
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   }, [])
 
   // Polling for recent rebuys when QR modal is open
@@ -597,71 +607,86 @@ function PokerTracker() {
         }}></div>
       </div>
 
-      <div className="relative max-w-4xl mx-auto px-4 py-6">
+      <div className="relative max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Header with enhanced styling */}
-        <header className="text-center mb-8">
-          <div className="inline-flex items-center justify-center space-x-3 mb-4">
-            <div className="text-6xl animate-pulse">🃏</div>
+        <header className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+            <div className="text-4xl sm:text-6xl animate-pulse">🃏</div>
             <div>
-              <h1 className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
                 Degen Poker
               </h1>
-              <p className="text-emerald-100 text-lg md:text-xl font-light">Live Game Dashboard</p>
+              <p className="text-emerald-100 text-sm sm:text-lg md:text-xl font-light">Live Game Dashboard</p>
             </div>
           </div>
         </header>
         
-        {/* Install Banner */}
+        {/* Install Banner - Enhanced for Mobile Safari */}
         {showInstallPrompt && (
-          <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 border border-blue-400/30 shadow-lg">
+          <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-blue-400/30 shadow-lg">
             <div className="text-center">
-              <div className="text-2xl mb-2">📱</div>
-              <p className="text-white font-bold mb-2">Install Poker Tracker</p>
-              <p className="text-blue-100 text-sm mb-4">Add to your home screen for quick access!</p>
-              <div className="flex gap-3 justify-center">
-                <button 
-                  onClick={handleInstallClick}
-                  className="bg-white text-blue-600 px-4 py-2 rounded-xl font-bold hover:bg-blue-50 transition-colors"
-                >
-                  Install App
-                </button>
-                <button 
-                  onClick={() => setShowInstallPrompt(false)}
-                  className="text-blue-100 hover:text-white px-4 py-2 transition-colors"
-                >
-                  Maybe Later
-                </button>
+              <div className="text-xl sm:text-2xl mb-2">📱</div>
+              <p className="text-white font-bold mb-1 sm:mb-2 text-sm sm:text-base">Install Degen Poker</p>
+              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4">
+                {/iPhone|iPad|iPod/.test(navigator.userAgent) 
+                  ? "Tap Share → Add to Home Screen" 
+                  : "Add to your home screen for quick access!"}
+              </p>
+              <div className="flex gap-2 sm:gap-3 justify-center">
+                {!/iPhone|iPad|iPod/.test(navigator.userAgent) ? (
+                  <>
+                    <button 
+                      onClick={handleInstallClick}
+                      className="bg-white text-blue-600 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-bold hover:bg-blue-50 transition-colors text-xs sm:text-sm"
+                    >
+                      Install App
+                    </button>
+                    <button 
+                      onClick={() => setShowInstallPrompt(false)}
+                      className="text-blue-100 hover:text-white px-3 sm:px-4 py-1.5 sm:py-2 transition-colors text-xs sm:text-sm"
+                    >
+                      Maybe Later
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={() => setShowInstallPrompt(false)}
+                    className="bg-white/20 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-bold hover:bg-white/30 transition-colors text-xs sm:text-sm"
+                  >
+                    Got it! 👍
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Hero Total Pot Section - ENHANCED DESIGN */}
-        <div className="mb-8">
-          <div className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-green-600 rounded-3xl p-8 shadow-2xl border border-green-400/20 overflow-hidden">
+        {/* Hero Total Pot Section - MOBILE OPTIMIZED */}
+        <div className="mb-6 sm:mb-8">
+          <div className="relative bg-gradient-to-br from-green-500 via-emerald-500 to-green-600 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl border border-green-400/20 overflow-hidden">
             {/* Premium glass effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20 blur-xl"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-16 -translate-x-16 blur-xl"></div>
+            {/* Decorative elements - hidden on mobile */}
+            <div className="hidden sm:block absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20 blur-xl"></div>
+            <div className="hidden sm:block absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-16 -translate-x-16 blur-xl"></div>
             
             <div className="relative text-center">
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <span className="text-3xl">💰</span>
-                <p className="text-green-100 text-xl font-semibold uppercase tracking-wider">Total Pot</p>
+              <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3">
+                <span className="text-2xl sm:text-3xl">💰</span>
+                <p className="text-green-100 text-base sm:text-xl font-semibold uppercase tracking-wider">Total Pot</p>
               </div>
-              <p className="text-7xl md:text-8xl font-black text-white mb-3 tracking-tight drop-shadow-lg">
+              <p className="text-5xl sm:text-7xl md:text-8xl font-black text-white mb-2 sm:mb-3 tracking-tight drop-shadow-lg">
                 ${gameStats.total_pot?.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
               </p>
-              <div className="flex items-center justify-center gap-4 text-green-100/90">
+              <div className="flex items-center justify-center gap-2 sm:gap-4 text-green-100/90 text-xs sm:text-base">
                 <span className="flex items-center gap-1">
-                  <span className="text-lg">👥</span>
+                  <span className="text-base sm:text-lg">👥</span>
                   <span className="font-medium">{activePlayers.length} active</span>
                 </span>
                 <span className="text-green-200/50">•</span>
                 <span className="flex items-center gap-1">
-                  <span className="text-lg">💵</span>
-                  <span className="font-medium">${gameStats.total_dealer_fees?.toFixed(0) || '0'} dealer fees</span>
+                  <span className="text-base sm:text-lg">💵</span>
+                  <span className="font-medium">${gameStats.total_dealer_fees?.toFixed(0) || '0'} fees</span>
                 </span>
               </div>
             </div>
@@ -740,31 +765,34 @@ function PokerTracker() {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        {/* Action Buttons - MOBILE OPTIMIZED */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           <button
             onClick={() => {
               requestNotificationPermission()
               alert('Host Mode: Notifications enabled!')
             }}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-3 px-4 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-purple-400/30"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-purple-400/30 text-xs sm:text-base"
           >
-            🔔 Host Mode
+            <span className="block sm:hidden">🔔</span>
+            <span className="hidden sm:inline">🔔 Host Mode</span>
           </button>
           <button
             onClick={openQRModal}
-            className="bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-3 px-4 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-orange-400/30"
+            className="bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-orange-400/30 text-xs sm:text-base"
           >
-            📱 Add Money
+            <span className="block sm:hidden">📱</span>
+            <span className="hidden sm:inline">📱 Add Money</span>
           </button>
           <button
             onClick={openAdminPanel}
-            className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-4 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-red-400/30 relative"
+            className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border border-red-400/30 relative text-xs sm:text-base"
           >
-            ⚙️ Host Tools
-            {adminAuthenticated && <span className="text-xs ml-1">✓</span>}
+            <span className="block sm:hidden">⚙️</span>
+            <span className="hidden sm:inline">⚙️ Host Tools</span>
+            {adminAuthenticated && <span className="text-xs ml-1 hidden sm:inline">✓</span>}
             {(pendingPayments.length + pendingCashOuts.length) > 0 && (
-              <span className="absolute -top-2 -right-2 bg-yellow-400 text-black px-2 py-1 rounded-full text-xs font-bold animate-bounce">
+              <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-yellow-400 text-black px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-bold animate-bounce">
                 {pendingPayments.length + pendingCashOuts.length}
               </span>
             )}
@@ -778,21 +806,21 @@ function PokerTracker() {
           </div>
         )}
 
-        {/* ACTIVE PLAYERS - ENHANCED DESIGN */}
-        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
-          <div className="text-center mb-6">
+        {/* ACTIVE PLAYERS - MOBILE OPTIMIZED */}
+        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 mb-6">
+          <div className="text-center mb-4 sm:mb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-3xl">🏆</span>
-              <h2 className="text-2xl font-bold text-white uppercase tracking-wide">Active Players</h2>
+              <span className="text-2xl sm:text-3xl">🏆</span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-wide">Active Players</h2>
             </div>
-            <p className="text-emerald-200 text-sm">({activePlayers.length} players with chips)</p>
+            <p className="text-emerald-200 text-xs sm:text-sm">({activePlayers.length} players with chips)</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {loading && players.length === 0 && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto"></div>
-                <p className="text-emerald-200 mt-2">Loading game...</p>
+                <p className="text-emerald-200 mt-2 text-sm">Loading game...</p>
               </div>
             )}
 
@@ -801,40 +829,40 @@ function PokerTracker() {
               .map((player, index) => (
               <div
                 key={player.id}
-                className={`rounded-2xl p-5 transition-all duration-300 border ${
+                className={`rounded-xl sm:rounded-2xl p-3 sm:p-5 transition-all duration-300 border ${
                   index === 0 && activePlayers.length > 1 
                     ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border-yellow-400/40 shadow-lg' 
                     : 'bg-white/5 border-white/20 hover:bg-white/10'
                 }`}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`text-2xl font-black w-8 text-center ${
+                <div className="flex justify-between items-start mb-2 sm:mb-3">
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1">
+                    <div className={`text-lg sm:text-2xl font-black w-6 sm:w-8 text-center ${
                       index === 0 && activePlayers.length > 1 ? 'text-yellow-400' : 'text-emerald-300'
                     }`}>
                       {index + 1}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl font-bold text-white">{player.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                        <span className="text-base sm:text-xl font-bold text-white truncate">{player.name}</span>
                         {index === 0 && activePlayers.length > 1 && (
-                          <span className="text-yellow-400 animate-pulse">👑</span>
+                          <span className="text-yellow-400 animate-pulse text-sm sm:text-base">👑</span>
                         )}
                       </div>
                       {player.payments?.length > 0 && (
                         <div className="space-y-1">
-                          <div className="text-sm text-emerald-200">
+                          <div className="text-xs sm:text-sm text-emerald-200">
                             <span className="text-emerald-400 font-medium">Transactions:</span>
                           </div>
-                          <div className="text-xs text-emerald-300 bg-black/20 rounded-lg p-2">
+                          <div className="text-xs text-emerald-300 bg-black/20 rounded-lg p-1.5 sm:p-2 break-words">
                             {formatPaymentSummary(player)}
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`text-2xl font-bold ${
+                  <div className="text-right ml-2">
+                    <div className={`text-lg sm:text-2xl font-bold ${
                       player.total > 0 ? 'text-green-400' : 'text-gray-400'
                     }`}>
                       ${player.total?.toFixed(0) || '0'}
@@ -843,11 +871,11 @@ function PokerTracker() {
                   </div>
                 </div>
                 
-                {/* Cash out button - cleaner design */}
+                {/* Cash out button - mobile optimized */}
                 {player.total > 0 && (
                   <button
                     onClick={() => openCashOutModal(player)}
-                    className="w-full py-2.5 px-4 bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 text-red-300 hover:text-red-200 rounded-xl transition-all duration-200 text-sm font-semibold border border-red-400/30 flex items-center justify-center gap-2"
+                    className="w-full py-2 sm:py-2.5 px-3 sm:px-4 bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 text-red-300 hover:text-red-200 rounded-lg sm:rounded-xl transition-all duration-200 text-xs sm:text-sm font-semibold border border-red-400/30 flex items-center justify-center gap-2"
                   >
                     <span>💰</span>
                     <span>Cash Out</span>
@@ -857,10 +885,10 @@ function PokerTracker() {
             ))}
 
             {!loading && activePlayers.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4 animate-bounce">🎲</div>
-                <p className="text-white text-xl font-semibold">Game Starting Soon</p>
-                <p className="text-emerald-300">Players will appear as they join via QR code</p>
+              <div className="text-center py-8 sm:py-12">
+                <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 animate-bounce">🎲</div>
+                <p className="text-white text-lg sm:text-xl font-semibold">Game Starting Soon</p>
+                <p className="text-emerald-300 text-sm sm:text-base">Players will appear as they join via QR code</p>
               </div>
             )}
           </div>
