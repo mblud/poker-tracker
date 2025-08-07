@@ -12,7 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // KEEP SERVICE WORKER ACTIVE (now with better caching)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/sw.js?v=v2025-08-06')
       .then((registration) => {
         console.log('Service Worker: Registered successfully', registration);
       })
