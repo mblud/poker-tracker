@@ -88,6 +88,14 @@ class PlayerService {
         method: 'PUT',
       })
     }
+
+    // Add this method to playerService class in api.js:
+async confirmCashOutWithPayments(cashOutId, paymentMethods) {
+    return this.request(`/api/cashouts/${cashOutId}/confirm`, {
+      method: 'PUT',
+      body: JSON.stringify(paymentMethods),
+    })
+  }
   
     // 🔥 NEW: Get recent confirmed cash outs
     async getRecentCashOuts() {
