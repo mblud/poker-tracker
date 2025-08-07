@@ -89,11 +89,14 @@ class PlayerService {
       })
     }
 
-    // Add this method to playerService class in api.js:
+// In api.js, update the confirmCashOut method:
 async confirmCashOutWithPayments(cashOutId, paymentMethods) {
     return this.request(`/api/cashouts/${cashOutId}/confirm`, {
       method: 'PUT',
-      body: JSON.stringify(paymentMethods),
+      body: JSON.stringify({
+        payment_methods: paymentMethods,
+        reason: "Player cashed out"
+      }),
     })
   }
   
