@@ -39,13 +39,16 @@ const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [adminPin] = useState('6969')
   const [pendingPayments, setPendingPayments] = useState([])
-  const [adminAuthenticated, setAdminAuthenticated] = useState(false) // NEW: Session persistence
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false)
 
   // Cash out state
   const [pendingCashOuts, setPendingCashOuts] = useState([])
   const [showCashOutModal, setShowCashOutModal] = useState(false)
   const [cashOutPlayer, setCashOutPlayer] = useState(null)
   const [cashOutAmount, setCashOutAmount] = useState('')
+  
+  // NEW: Recent cash outs for display
+  const [recentCashOuts, setRecentCashOuts] = useState([])
 
   // Generate QR code URL
   const rebuyUrl = `${window.location.origin}/rebuy`
@@ -54,16 +57,18 @@ const [showInstallPrompt, setShowInstallPrompt] = useState(false)
 useEffect(() => {
   loadPlayers()
   loadGameStats()
-  loadPendingPayments() // Load initially
-  loadPendingCashOuts() // Load initially
+  loadPendingPayments()
+  loadPendingCashOuts()
+  loadRecentCashOuts() // NEW: Load recent cash outs
   
   // Set up polling every 5 seconds to auto-update the page
   const interval = setInterval(() => {
     loadPlayers()
     loadGameStats()
     checkForNewPayments()
-    loadPendingPayments() // ADD THIS - poll for pending payments
+    loadPendingPayments()
     loadPendingCashOuts()
+    loadRecentCashOuts() // NEW: Poll recent cash outs
   }, 5000)
   
   return () => clearInterval(interval)
@@ -133,6 +138,16 @@ useEffect(() => {
       setPendingCashOuts(response.data)
     } catch (err) {
       console.error('Error loading pending cash outs:', err)
+    }
+  }
+
+  // NEW: Load recent confirmed cash outs
+  const loadRecentCashOuts = async () => {
+    try {
+      const response = await playerService.getRecentCashOuts()
+      setRecentCashOuts(response.data)
+    } catch (err) {
+      console.error('Error loading recent cash outs:', err)
     }
   }
 
@@ -249,8 +264,7 @@ useEffect(() => {
     setCashOutAmount('')
   }
 
-// 🔥 REPLACE YOUR processCashOut FUNCTION WITH THIS:
-
+// 🔥 FIXED: Cash out logic
 const processCashOut = async () => {
   console.log('🔍 DEBUG: Starting cash out process');
   console.log('💰 Cash out amount:', cashOutAmount);
@@ -272,7 +286,7 @@ const processCashOut = async () => {
     return;
   }
   
-  // 🚀 POKER LOGIC: Players can cash out up to total pot
+  // 🚀 POKER LOGIC: Players can cash out up to total pot (they can win!)
   const totalPot = gameStats.total_pot || 0;
   console.log('🎯 Total pot available:', totalPot);
   
@@ -283,7 +297,7 @@ const processCashOut = async () => {
     return;
   }
   
-  // Optional warning if they're cashing out more than they put in (they're winning!)
+  // Warning if they're cashing out more than they put in (they're winning!)
   if (amount > cashOutPlayer.total) {
     const extraAmount = amount - cashOutPlayer.total;
     const confirmMsg = `${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in. This means they won money! Continue?`;
@@ -331,7 +345,8 @@ const processCashOut = async () => {
     await Promise.all([
       loadPlayers(),
       loadGameStats(),
-      loadPendingCashOuts()
+      loadPendingCashOuts(),
+      loadRecentCashOuts() // NEW: Refresh recent cash outs
     ]);
     
     closeCashOutModal();
@@ -374,6 +389,7 @@ const processCashOut = async () => {
       await loadGameStats()
       await loadPendingCashOuts()
       await loadRecentTransactions()
+      await loadRecentCashOuts() // NEW: Refresh recent cash outs
       setError('')
     } catch (err) {
       setError('Failed to confirm cash out')
@@ -540,7 +556,7 @@ const processCashOut = async () => {
       })
       
       try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEASD0AAEg9AAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBy6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcF')
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEASD0AAEg9AAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBy6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcFJHfH8N2QQAoUXrTp66hVFApGn+DyvmENBS6T3O/QdCcF')
         audio.volume = 0.3
         audio.play()
       } catch (e) {
@@ -559,6 +575,10 @@ const processCashOut = async () => {
       ...data,
       percentage: totalPayments > 0 ? (data.total / totalPayments) * 100 : 0
     }))
+
+  // 🔥 NEW: Separate active players from cashed out players
+  const activePlayers = players.filter(player => player.total > 0)
+  const cashedOutPlayers = players.filter(player => player.total === 0 && player.payments?.length > 0)
 
 return (
   <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-emerald-900">
@@ -582,7 +602,8 @@ return (
           </div>
         </div>
       </header>
-        {/* 🟢 ADD THIS INSTALL BANNER right after your header, before Hero Total Pot */}
+        
+        {/* Install Banner */}
         {showInstallPrompt && (
           <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 border border-blue-400/30 shadow-lg">
             <div className="text-center">
@@ -607,7 +628,7 @@ return (
           </div>
         )}
 
-      {/* Hero Total Pot Section - BIGGEST AND MOST BEAUTIFUL */}
+      {/* Hero Total Pot Section */}
       <div className="mb-8">
         <div className="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-8 shadow-2xl border border-green-400/20 overflow-hidden">
           {/* Decorative elements */}
@@ -620,13 +641,13 @@ return (
               ${gameStats.total_pot?.toLocaleString('en-US', {minimumFractionDigits: 2}) || '0.00'}
             </p>
             <p className="text-green-100/80 text-sm">
-              {players.length} players • ${gameStats.total_dealer_fees?.toFixed(0) || '0'} in fees
+              {activePlayers.length} active players • ${gameStats.total_dealer_fees?.toFixed(0) || '0'} in fees
             </p>
           </div>
         </div>
       </div>
 
-      {/* Compact Stats Grid - SMALLER */}
+      {/* Compact Stats Grid */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
           <p className="text-emerald-100 text-sm font-medium mb-1">💸 Cash Outs</p>
@@ -638,7 +659,7 @@ return (
         </div>
       </div>
 
-      {/* Enhanced Payment Methods Visualization - RESPONSIVE CHART */}
+      {/* Enhanced Payment Methods Visualization */}
       {paymentMethodsWithPercentage.length > 0 && (
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
           <h3 className="text-lg font-bold text-white mb-4 text-center">💳 Payment Methods</h3>
@@ -707,11 +728,11 @@ return (
         </div>
       )}
 
-      {/* Enhanced Player Rankings - SMALLER CASH OUT BUTTONS */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+      {/* 🔥 ACTIVE PLAYERS - Only show players with money */}
+      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-white mb-2">🏆 Player Buy-ins</h2>
-          <p className="text-emerald-200">({players.length} players in game)</p>
+          <h2 className="text-2xl font-bold text-white mb-2">🏆 Active Players</h2>
+          <p className="text-emerald-200">({activePlayers.length} players with chips)</p>
         </div>
 
         <div className="space-y-3">
@@ -722,13 +743,13 @@ return (
             </div>
           )}
 
-          {players
+          {activePlayers
             .sort((a, b) => b.total - a.total)
             .map((player, index) => (
             <div
               key={player.id}
               className={`rounded-2xl p-4 transition-all duration-300 border ${
-                index === 0 && players.length > 1 
+                index === 0 && activePlayers.length > 1 
                   ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border-yellow-400/40 shadow-lg' 
                   : 'bg-white/5 border-white/20 hover:bg-white/10'
               }`}
@@ -736,14 +757,14 @@ return (
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-3">
                   <div className={`text-xl font-bold w-6 text-center ${
-                    index === 0 && players.length > 1 ? 'text-yellow-400' : 'text-emerald-300'
+                    index === 0 && activePlayers.length > 1 ? 'text-yellow-400' : 'text-emerald-300'
                   }`}>
                     {index + 1}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-white">{player.name}</span>
-                      {index === 0 && players.length > 1 && <span className="text-yellow-400">👑</span>}
+                      {index === 0 && activePlayers.length > 1 && <span className="text-yellow-400">👑</span>}
                     </div>
                     <div className="text-sm text-emerald-200">
                       {player.payments?.length > 0 ? (
@@ -767,7 +788,7 @@ return (
                 </div>
               </div>
               
-              {/* SMALLER, MORE SUBTLE CASH OUT BUTTON */}
+              {/* Cash out button for active players */}
               {player.total > 0 && (
                 <button
                   onClick={() => openCashOutModal(player)}
@@ -779,7 +800,7 @@ return (
             </div>
           ))}
 
-          {!loading && players.length === 0 && (
+          {!loading && activePlayers.length === 0 && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4 animate-bounce">🎲</div>
               <p className="text-white text-xl font-semibold">Game Starting Soon</p>
@@ -789,7 +810,74 @@ return (
         </div>
       </div>
 
-        {/* All your existing modals with enhanced styling */}
+      {/* 🔥 NEW: Recent Cash Outs Section */}
+      {recentCashOuts.length > 0 && (
+        <div className="bg-red-500/10 backdrop-blur-sm rounded-2xl p-6 border border-red-400/30 mb-6">
+          <div className="text-center mb-4">
+            <h2 className="text-xl font-bold text-red-300 mb-2">💸 Recent Cash Outs</h2>
+            <p className="text-red-200 text-sm">Players who have left the game</p>
+          </div>
+
+          <div className="space-y-2">
+            {recentCashOuts.slice(0, 5).map((cashOut, index) => (
+              <div
+                key={cashOut.id}
+                className="flex justify-between items-center p-3 bg-red-500/10 rounded-xl border border-red-400/20"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-red-400 font-bold text-sm">#{index + 1}</span>
+                  <div>
+                    <div className="text-white font-medium">{cashOut.player_name}</div>
+                    <div className="text-red-300 text-xs">
+                      {new Date(cashOut.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-red-300 font-bold">-${cashOut.amount?.toFixed(0)}</div>
+                  <div className="text-red-400 text-xs">cashed out</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 NEW: Cashed Out Players (if any have 0 total but had transactions) */}
+      {cashedOutPlayers.length > 0 && (
+        <div className="bg-gray-500/10 backdrop-blur-sm rounded-2xl p-6 border border-gray-400/30">
+          <div className="text-center mb-4">
+            <h2 className="text-xl font-bold text-gray-300 mb-2">📤 Players Out of Game</h2>
+            <p className="text-gray-400 text-sm">Players with no remaining chips</p>
+          </div>
+
+          <div className="space-y-2">
+            {cashedOutPlayers.map((player, index) => (
+              <div
+                key={player.id}
+                className="flex justify-between items-center p-3 bg-gray-500/10 rounded-xl border border-gray-400/20"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-400 font-bold text-sm">-</span>
+                  <div>
+                    <div className="text-gray-300 font-medium">{player.name}</div>
+                    <div className="text-gray-400 text-xs">
+                      💳 {formatPaymentSummary(player)}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-gray-400 font-bold">$0</div>
+                  <div className="text-gray-500 text-xs">no chips</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+        {/* All modals remain the same until Cash Out Modal... */}
+        
         {/* QR Code Modal */}
         {showQRModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -840,8 +928,7 @@ return (
           </div>
         )}
 
-
-{/* 🔥 REPLACE YOUR CASH OUT MODAL WITH THIS FIXED VERSION */}
+{/* 🔥 COMPLETELY FIXED CASH OUT MODAL */}
 {showCashOutModal && (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
@@ -869,7 +956,6 @@ return (
             type="number"
             step="0.01"
             min="0.01"
-            max={gameStats.total_pot || 0}
             value={cashOutAmount}
             onChange={(e) => setCashOutAmount(e.target.value)}
             className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -878,16 +964,10 @@ return (
           
           <div className="flex gap-2 mt-3 flex-wrap">
             <button
-              onClick={() => setCashOutAmount((cashOutPlayer?.total / 2).toFixed(2))}
+              onClick={() => setCashOutAmount((cashOutPlayer?.total || 0).toFixed(2))}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
             >
-              Half (${((cashOutPlayer?.total || 0) / 2).toFixed(2)})
-            </button>
-            <button
-              onClick={() => setCashOutAmount(cashOutPlayer?.total?.toFixed(2) || '0')}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg text-sm transition-colors"
-            >
-              All In (${cashOutPlayer?.total?.toFixed(2) || '0.00'})
+              My Chips (${(cashOutPlayer?.total || 0).toFixed(2)})
             </button>
             <button
               onClick={() => setCashOutAmount((gameStats.total_pot || 0).toFixed(2))}
@@ -917,24 +997,17 @@ return (
         </button>
         <button
           onClick={processCashOut}
-          disabled={!cashOutAmount || loading || parseFloat(cashOutAmount) > (gameStats.total_pot || 0)}
+          disabled={!cashOutAmount || loading}
           className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
         >
           {loading ? 'Processing...' : 'Cash Out'}
         </button>
       </div>
-      
-      {/* Debug info - remove this after testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-2 bg-gray-800 rounded text-xs text-gray-300">
-          Debug: Player=${cashOutPlayer?.total}, Pot=${gameStats.total_pot}, Amount=${cashOutAmount}
-        </div>
-      )}
     </div>
   </div>
 )}
 
-        {/* Enhanced PIN Modal */}
+        {/* PIN Modal */}
         {showPinModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-sm border border-white/20 shadow-2xl">
@@ -943,11 +1016,11 @@ return (
                 <p className="text-emerald-200 mb-6">Enter PIN to access admin panel</p>
                 
                 <input
-          type="tel" // 📱 MOBILE FIX: Forces number keyboard
-          inputMode="numeric" // 📱 MOBILE FIX: iOS numeric keyboard
-          pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
+          type="tel"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={pinInput}
-          onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))} // Only allow 4 digits
+          onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
           onKeyPress={handlePinKeyPress}
           placeholder="••••"
           className="w-full px-4 py-4 bg-white/10 border border-white/30 rounded-xl text-white text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-400 tracking-widest"
@@ -981,7 +1054,7 @@ return (
           </div>
         )}
 
-        {/* Enhanced Buy-In Modal */}
+        {/* Buy-In Modal */}
         {showBuyInModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
@@ -995,9 +1068,9 @@ return (
                     Amount ($)
                   </label>
                   <input
-  type="tel" // 📱 MOBILE FIX: Better than "number" on mobile
-  inputMode="decimal" // 📱 MOBILE FIX: Shows decimal keyboard
-  pattern="[0-9]*" // 📱 MOBILE FIX: Safari numeric keyboard
+  type="tel"
+  inputMode="decimal"
+  pattern="[0-9]*"
   value={buyInAmount}
   onChange={(e) => setBuyInAmount(e.target.value)}
   placeholder="Enter amount"
@@ -1078,7 +1151,7 @@ return (
           </div>
         )}
 
-        {/* Enhanced Admin Panel Modal */}
+        {/* Admin Panel Modal - keeping same as before */}
         {showAdminPanel && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-5xl max-h-[85vh] overflow-hidden border border-white/20 shadow-2xl">
@@ -1204,17 +1277,17 @@ return (
                     <div className="flex gap-4">
                     <input
   type="text"
-  inputMode="text" // 📱 MOBILE FIX: Ensures full keyboard
+  inputMode="text"
   placeholder="Enter player name"
   value={playerName}
   onChange={(e) => setPlayerName(e.target.value)}
   onKeyPress={handleKeyPress}
   disabled={loading}
   className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50"
-  autoComplete="given-name" // 📱 MOBILE FIX: Better autocomplete
+  autoComplete="given-name"
   autoCorrect="off"
   spellCheck="false"
-  autoCapitalize="words" // 📱 MOBILE FIX: Capitalizes names
+  autoCapitalize="words"
 />
                       <button
                         onClick={addPlayer}
