@@ -264,7 +264,10 @@ useEffect(() => {
     setCashOutAmount('')
   }
 
-// 🔥 FIXED: Cash out logic
+// LOCATION: App.jsx around line 300-400
+// FIND: const processCashOut = async () => {
+// REPLACE THE ENTIRE FUNCTION WITH THIS:
+
 const processCashOut = async () => {
   console.log('🔍 DEBUG: Starting cash out process');
   console.log('💰 Cash out amount:', cashOutAmount);
@@ -891,7 +894,6 @@ return (
           </div>
         )}
 
-{/* 🔥 COMPLETELY FIXED CASH OUT MODAL */}
 {showCashOutModal && (
   <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-md border border-white/20 shadow-2xl">
@@ -916,15 +918,15 @@ return (
           </label>
          
           <input
-  type="number"
-  step="0.01"
-  min="0.01"
-  max={gameStats.total_pot || 1000000} // 🔥 FIXED: Set max to total pot
-  value={cashOutAmount}
-  onChange={(e) => setCashOutAmount(e.target.value)}
-  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-  placeholder="Enter amount"
-/>
+            type="number"
+            step="0.01"
+            min="0.01"
+            max={gameStats.total_pot || 0} // 🔥 THIS IS THE KEY FIX - USE TOTAL POT NOT PLAYER TOTAL
+            value={cashOutAmount}
+            onChange={(e) => setCashOutAmount(e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            placeholder="Enter amount"
+          />
           
           <div className="flex gap-2 mt-3 flex-wrap">
             <button
