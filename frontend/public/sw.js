@@ -1,208 +1,75 @@
-// Enhanced Service Worker for Poker Tracker PWA
-console.log('Service Worker: Script loaded');
+// 🔥 COMPLETE SERVICE WORKER FIX - NO MORE CACHE ERRORS!
+console.log('Service Worker: FIXED VERSION Loading');
 
-const CACHE_NAME = 'poker-tracker-v2'; // ← UPDATED VERSION!
-const STATIC_CACHE = 'poker-static-v2'; // ← UPDATED VERSION!
+const CACHE_NAME = 'poker-tracker-v100'; // 🚨 HIGH VERSION TO FORCE UPDATE
+const STATIC_CACHE = 'poker-static-v100';
 
-// Files to cache for offline use
+// Only cache these specific files
 const urlsToCache = [
   '/',
-  '/manifest.json',
-  '/favicon.ico'
+  '/manifest.json'
 ];
 
-// Install event - cache essential files
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('🔥 Service Worker: INSTALLING FIXED VERSION');
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
-        console.log('Service Worker: Caching static files');
+        console.log('✅ Service Worker: Caching basic files only');
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('Service Worker: Skip waiting - force activation');
-        return self.skipWaiting(); // Force immediate activation
+        console.log('🚀 Service Worker: FORCING IMMEDIATE ACTIVATION');
+        return self.skipWaiting();
       })
   );
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated');
+  console.log('✅ Service Worker: ACTIVATED - CLEARING ALL OLD CACHES');
   
   event.waitUntil(
     Promise.all([
-      // Clean up old caches
+      // 🔥 DELETE ALL OLD CACHES
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE) {
-              console.log('Service Worker: Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            }
+            console.log('🗑️ Deleting cache:', cacheName);
+            return caches.delete(cacheName);
           })
         );
       }),
-      // Take control of all pages immediately
+      // Take control immediately
       self.clients.claim()
     ])
   );
 });
 
-// Fetch event - handle requests (fixed for new assets)
+// 🚨 CRITICAL FIX: DO NOT INTERCEPT ANY API CALLS!
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Handle API requests differently
-  if (url.pathname.startsWith('/api/')) {
+  // 🔥 NEVER TOUCH API CALLS - LET THEM GO DIRECTLY TO NETWORK
+  if (url.pathname.startsWith('/api/') || 
+      url.pathname.includes('cashout') || 
+      url.pathname.includes('payment') ||
+      request.method !== 'GET') {
+    console.log('🚫 Service Worker: IGNORING API CALL:', url.pathname);
+    return; // Let it go directly to network - NO CACHING!
+  }
+  
+  // Only handle basic navigation (HTML pages)
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // If online, return fresh data and cache it
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // If offline, try to serve from cache
-          console.log('Service Worker: API request failed, trying cache');
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Return a basic offline response for critical endpoints
-            if (url.pathname === '/api/players') {
-              return new Response(JSON.stringify([]), {
-                headers: { 'Content-Type': 'application/json' }
-              });
-            }
-            // For other API calls, return error response
-            return new Response('Offline', { status: 503 });
-          });
-        })
-    );
-  } 
-  // Handle JavaScript/CSS assets with cache-first strategy
-  else if (url.pathname.startsWith('/assets/') || url.pathname.includes('.js') || url.pathname.includes('.css')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Always use fresh version for JS/CSS assets
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // If offline, try cache as fallback
-          return caches.match(request);
-        })
-    );
-  }
-  // Handle everything else (HTML pages)
-  else {
-    event.respondWith(
-      caches.match(request)
-        .then((response) => {
-          // Return cached version or fetch from network
-          return response || fetch(request);
-        })
-        .catch(() => {
-          // If offline and no cache, return index.html for SPA routing
-          if (request.mode === 'navigate') {
-            return caches.match('/');
-          }
-          return new Response('Offline', { status: 503 });
-        })
-    );
-  }
-});
-
-// Background sync for when connection comes back
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync', event.tag);
-  
-  if (event.tag === 'background-sync') {
-    event.waitUntil(
-      syncPendingData()
-    );
-  }
-});
-
-// Push notifications for real-time updates
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push notification received', event);
-  
-  let notificationData = {
-    title: '🃏 Poker Tracker',
-    body: 'New game update!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    vibrate: [100, 50, 100],
-    data: {
-      url: '/',
-      timestamp: Date.now()
-    }
-  };
-  
-  // Parse push data if available
-  if (event.data) {
-    try {
-      const pushData = event.data.json();
-      notificationData = {
-        ...notificationData,
-        ...pushData
-      };
-    } catch (e) {
-      notificationData.body = event.data.text() || notificationData.body;
-    }
-  }
-  
-  event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationData)
-  );
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked', event);
-  
-  event.notification.close();
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window' })
-      .then((clientList) => {
-        // If app is already open, focus it
-        for (const client of clientList) {
-          if (client.url === '/' && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        // Otherwise, open new window
-        if (clients.openWindow) {
-          return clients.openWindow('/');
-        }
+      fetch(request).catch(() => {
+        return caches.match('/');
       })
-  );
+    );
+  }
+  
+  // For everything else, just let it pass through
 });
 
-// Helper function for syncing data when back online
-async function syncPendingData() {
-  try {
-    console.log('Service Worker: Syncing pending data...');
-    return Promise.resolve();
-  } catch (error) {
-    console.error('Service Worker: Sync failed', error);
-    throw error;
-  }
-}
+console.log('✅ Service Worker: FIXED VERSION LOADED - NO MORE CACHE ERRORS!');
