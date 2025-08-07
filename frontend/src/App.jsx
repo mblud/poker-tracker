@@ -272,15 +272,12 @@ const processCashOut = async () => {
   console.log('🎯 Game stats:', gameStats);
   
   if (!cashOutAmount || !cashOutPlayer) {
-    console.log('❌ Missing data');
     setError('Please enter a valid amount');
     return;
   }
 
   const amount = parseFloat(cashOutAmount);
-  console.log('💵 Parsed amount:', amount);
   
-  // Basic validation
   if (amount <= 0 || isNaN(amount)) {
     setError('Cash out amount must be a positive number');
     return;
@@ -290,17 +287,18 @@ const processCashOut = async () => {
   const totalPot = gameStats.total_pot || 0;
   console.log('🎯 Total pot available:', totalPot);
   
+  // 🔥 FIXED: Only prevent if amount exceeds TOTAL POT, not player's individual total
   if (amount > totalPot) {
     const errorMsg = `Cannot cash out $${amount.toFixed(2)}. Total pot only has $${totalPot.toFixed(2)}.`;
-    console.log('❌ Amount exceeds pot:', errorMsg);
+    console.log('❌ Amount exceeds total pot:', errorMsg);
     setError(errorMsg);
     return;
   }
   
-  // Warning if they're cashing out more than they put in (they're winning!)
+  // Show confirmation if they're winning money
   if (amount > cashOutPlayer.total) {
     const extraAmount = amount - cashOutPlayer.total;
-    const confirmMsg = `${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in. This means they won money! Continue?`;
+    const confirmMsg = `🎉 ${cashOutPlayer.name} is cashing out $${extraAmount.toFixed(2)} MORE than they put in!\n\nThis means they WON money from other players.\n\nContinue with $${amount.toFixed(2)} cash out?`;
     console.log('🎉 Player winning money:', confirmMsg);
     if (!confirm(confirmMsg)) {
       return;
@@ -309,68 +307,33 @@ const processCashOut = async () => {
 
   try {
     setLoading(true);
-    setError(''); // Clear any previous errors
+    setError('');
     
     console.log('🚀 Sending cash out request to API...');
-    console.log('📡 Request data:', {
-      playerId: cashOutPlayer.id,
-      amount: amount,
-      reason: "Player cashed out"
-    });
     
     const response = await playerService.createCashOut(cashOutPlayer.id, {
-      amount: amount,
+      amount: amount, // Send the FULL amount
       reason: "Player cashed out"
     });
     
     console.log('✅ Cash out API response:', response.data);
     
-    // Show success notification
-    if (notificationsEnabled) {
-      try {
-        new Notification(`💰 Cash Out Request!`, {
-          body: `${cashOutPlayer.name} wants to cash out $${amount.toFixed(2)}`,
-          icon: '🃏',
-          vibrate: [300, 100, 300, 100, 300],
-          tag: 'poker-cashout',
-          requireInteraction: true
-        });
-      } catch (notifError) {
-        console.log('Notification failed:', notifError);
-      }
-    }
-    
     // Refresh all data
-    console.log('🔄 Refreshing game data...');
     await Promise.all([
       loadPlayers(),
-      loadGameStats(),
+      loadGameStats(), 
       loadPendingCashOuts(),
-      loadRecentCashOuts() // NEW: Refresh recent cash outs
+      loadRecentCashOuts()
     ]);
     
     closeCashOutModal();
-    console.log('✅ Cash out completed successfully');
     
   } catch (err) {
-    console.error('❌ FULL CASH OUT ERROR:', err);
-    console.error('❌ Error response:', err.response);
-    console.error('❌ Error data:', err.response?.data);
-    console.error('❌ Error status:', err.response?.status);
-    
+    console.error('❌ CASH OUT ERROR:', err);
     let errorMsg = 'Failed to process cash out';
-    
     if (err.response?.data?.detail) {
       errorMsg = err.response.data.detail;
-    } else if (err.response?.status === 400) {
-      errorMsg = 'Invalid cash out amount or request';
-    } else if (err.response?.status === 404) {
-      errorMsg = 'Player not found';
-    } else if (err.message) {
-      errorMsg = `Error: ${err.message}`;
     }
-    
-    console.error('❌ Final error message:', errorMsg);
     setError(errorMsg);
   } finally {
     setLoading(false);
@@ -953,14 +916,15 @@ return (
           </label>
          
           <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={cashOutAmount}
-            onChange={(e) => setCashOutAmount(e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            placeholder="Enter amount"
-          />
+  type="number"
+  step="0.01"
+  min="0.01"
+  max={gameStats.total_pot || 1000000} // 🔥 FIXED: Set max to total pot
+  value={cashOutAmount}
+  onChange={(e) => setCashOutAmount(e.target.value)}
+  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+  placeholder="Enter amount"
+/>
           
           <div className="flex gap-2 mt-3 flex-wrap">
             <button
