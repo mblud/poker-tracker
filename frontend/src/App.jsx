@@ -1317,52 +1317,52 @@ function PokerTracker() {
           </div>
         )}
 
-        {/* Admin Panel Modal */}
+        {/* Admin Panel Modal - MOBILE OPTIMIZED */}
         {showAdminPanel && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 w-full max-w-5xl max-h-[85vh] overflow-hidden border border-white/20 shadow-2xl">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-5xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden border border-white/20 shadow-2xl">
               {/* Header */}
-              <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20">
-                <h3 className="text-2xl font-bold text-white">⚙️ Host Control Panel</h3>
+              <div className="flex justify-between items-center mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-white/20">
+                <h3 className="text-lg sm:text-2xl font-bold text-white">⚙️ Host Control Panel</h3>
                 <button
                   onClick={() => setShowAdminPanel(false)}
-                  className="text-gray-400 hover:text-white text-2xl font-bold transition-colors"
+                  className="text-gray-400 hover:text-white text-xl sm:text-2xl font-bold transition-colors p-1"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="overflow-y-auto max-h-[70vh]">
+              <div className="overflow-y-auto max-h-[75vh] sm:max-h-[70vh] px-1">
                 
                 {/* 1. PENDING PAYMENTS - TOP PRIORITY */}
-                <div className="mb-8">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">⏳</span>
-                    <h4 className="text-xl font-bold text-white">Pending Payments</h4>
-                    <span className="bg-yellow-500/20 text-yellow-200 px-3 py-1 rounded-full text-sm font-medium border border-yellow-400/30">
+                <div className="mb-6 sm:mb-8">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">⏳</span>
+                    <h4 className="text-base sm:text-xl font-bold text-white">Pending Payments</h4>
+                    <span className="bg-yellow-500/20 text-yellow-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium border border-yellow-400/30">
                       {pendingPayments.length} waiting
                     </span>
                   </div>
                   
                   {pendingPayments.length === 0 ? (
-                    <div className="text-center py-6 bg-green-500/20 border border-green-400/30 rounded-xl">
-                      <span className="text-3xl">✅</span>
-                      <p className="text-green-200 font-medium mt-2">All payments confirmed!</p>
+                    <div className="text-center py-4 sm:py-6 bg-green-500/20 border border-green-400/30 rounded-lg sm:rounded-xl">
+                      <span className="text-2xl sm:text-3xl">✅</span>
+                      <p className="text-green-200 font-medium mt-2 text-sm sm:text-base">All payments confirmed!</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {pendingPayments.map((payment) => (
                         <div
                           key={payment.id}
-                          className="flex justify-between items-center p-4 border-l-4 border-yellow-400 bg-yellow-500/20 rounded-xl"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-l-4 border-yellow-400 bg-yellow-500/20 rounded-lg sm:rounded-xl"
                         >
-                          <div>
-                            <div className="font-bold text-lg text-white">{payment.player_name}</div>
-                            <div className="text-yellow-200">
+                          <div className="mb-3 sm:mb-0">
+                            <div className="font-bold text-base sm:text-lg text-white">{payment.player_name}</div>
+                            <div className="text-yellow-200 text-sm">
                               ${payment.amount} • {payment.method} • {payment.type}
-                              {payment.dealer_fee_applied && ' • $35 fee applied'}
+                              {payment.dealer_fee_applied && ' • $35 fee'}
                             </div>
-                            <div className="text-sm text-yellow-300">
+                            <div className="text-xs sm:text-sm text-yellow-300">
                               {new Date(payment.timestamp).toLocaleString()}
                             </div>
                           </div>
@@ -1374,7 +1374,7 @@ function PokerTracker() {
                               payment.amount
                             )}
                             disabled={loading}
-                            className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 font-bold transition-colors"
+                            className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg sm:rounded-xl hover:bg-green-700 disabled:opacity-50 font-bold transition-colors text-sm"
                           >
                             ✅ Confirm
                           </button>
@@ -1385,43 +1385,43 @@ function PokerTracker() {
                 </div>
 
                 {/* PENDING CASH OUTS */}
-                <div className="mb-8 pb-8 border-b border-white/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">💰</span>
-                    <h4 className="text-xl font-bold text-white">Pending Cash Outs</h4>
-                    <span className="bg-red-500/20 text-red-200 px-3 py-1 rounded-full text-sm font-medium border border-red-400/30">
+                <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-white/20">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">💰</span>
+                    <h4 className="text-base sm:text-xl font-bold text-white">Pending Cash Outs</h4>
+                    <span className="bg-red-500/20 text-red-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium border border-red-400/30">
                       {pendingCashOuts.length} waiting
                     </span>
                   </div>
                   
                   {pendingCashOuts.length === 0 ? (
-                    <div className="text-center py-4 bg-green-500/20 border border-green-400/30 rounded-xl">
-                      <span className="text-2xl">✅</span>
-                      <p className="text-green-200 font-medium mt-2">No pending cash outs</p>
+                    <div className="text-center py-3 sm:py-4 bg-green-500/20 border border-green-400/30 rounded-lg sm:rounded-xl">
+                      <span className="text-xl sm:text-2xl">✅</span>
+                      <p className="text-green-200 font-medium mt-2 text-sm sm:text-base">No pending cash outs</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {pendingCashOuts.map((cashOut) => (
                         <div
                           key={cashOut.id}
-                          className="flex justify-between items-center p-4 border-l-4 border-red-400 bg-red-500/20 rounded-xl"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 border-l-4 border-red-400 bg-red-500/20 rounded-lg sm:rounded-xl"
                         >
-                          <div>
-                            <div className="font-bold text-lg text-white">{cashOut.player_name}</div>
-                            <div className="text-red-200">
+                          <div className="mb-3 sm:mb-0">
+                            <div className="font-bold text-base sm:text-lg text-white">{cashOut.player_name}</div>
+                            <div className="text-red-200 text-sm">
                               ${cashOut.amount} cash out request
                             </div>
-                            <div className="text-sm text-red-300">
+                            <div className="text-xs sm:text-sm text-red-300">
                               {new Date(cashOut.timestamp).toLocaleString()}
                             </div>
                             {cashOut.reason && (
-                              <div className="text-sm text-red-300 italic">"{cashOut.reason}"</div>
+                              <div className="text-xs sm:text-sm text-red-300 italic">"{cashOut.reason}"</div>
                             )}
                           </div>
                           <button
                             onClick={() => confirmCashOut(cashOut.id, cashOut.player_name, cashOut.amount)}
                             disabled={loading}
-                            className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 font-bold transition-colors"
+                            className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-600 text-white rounded-lg sm:rounded-xl hover:bg-red-700 disabled:opacity-50 font-bold transition-colors text-sm"
                           >
                             ✅ Confirm
                           </button>
@@ -1432,15 +1432,15 @@ function PokerTracker() {
                 </div>
 
                 {/* 2. ADD NEW PLAYER */}
-                <div className="mb-8 pb-8 border-b border-white/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">👤</span>
-                    <h4 className="text-xl font-bold text-white">Add New Player</h4>
-                    <span className="text-sm text-emerald-300">(players can also join via QR code)</span>
+                <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-white/20">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">👤</span>
+                    <h4 className="text-base sm:text-xl font-bold text-white">Add New Player</h4>
                   </div>
+                  <p className="text-xs sm:text-sm text-emerald-300 mb-3">(players can also join via QR code)</p>
                   
-                  <div className="bg-green-500/20 border border-green-400/30 rounded-xl p-4">
-                    <div className="flex gap-4">
+                  <div className="bg-green-500/20 border border-green-400/30 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <input
                         type="text"
                         inputMode="text"
@@ -1449,7 +1449,7 @@ function PokerTracker() {
                         onChange={(e) => setPlayerName(e.target.value)}
                         onKeyPress={handleKeyPress}
                         disabled={loading}
-                        className="flex-1 px-4 py-3 bg-white/10 border border-white/30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50"
+                        className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 border border-white/30 rounded-lg sm:rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 disabled:opacity-50 text-sm sm:text-base"
                         autoComplete="given-name"
                         autoCorrect="off"
                         spellCheck="false"
@@ -1458,7 +1458,7 @@ function PokerTracker() {
                       <button
                         onClick={addPlayer}
                         disabled={loading || !playerName.trim()}
-                        className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 font-bold transition-colors"
+                        className="px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-lg sm:rounded-xl hover:bg-green-700 disabled:opacity-50 font-bold transition-colors text-sm sm:text-base"
                       >
                         {loading ? 'Adding...' : '+ Add Player'}
                       </button>
@@ -1467,28 +1467,28 @@ function PokerTracker() {
                 </div>
 
                 {/* 3. MANUAL BUY-IN */}
-                <div className="mb-8 pb-8 border-b border-white/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">💰</span>
-                    <h4 className="text-xl font-bold text-white">Manual Buy-In</h4>
-                    <span className="text-sm text-emerald-300">(for cash payments & corrections)</span>
+                <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-white/20">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">💰</span>
+                    <h4 className="text-base sm:text-xl font-bold text-white">Manual Buy-In</h4>
                   </div>
+                  <p className="text-xs sm:text-sm text-emerald-300 mb-3">(for cash payments & corrections)</p>
                   
-                  <div className="bg-blue-500/20 border border-blue-400/30 rounded-xl p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <div className="grid grid-cols-1 gap-3 sm:gap-4">
                       {players.map((player) => (
                         <div
                           key={player.id}
-                          className="flex justify-between items-center p-3 bg-white/10 rounded-xl border border-white/20"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-white/10 rounded-lg sm:rounded-xl border border-white/20 gap-2"
                         >
                           <div>
-                            <div className="font-medium text-white">{player.name}</div>
-                            <div className="text-sm text-emerald-200">${player.total?.toFixed(2) || '0.00'} committed</div>
+                            <div className="font-medium text-white text-sm sm:text-base">{player.name}</div>
+                            <div className="text-xs sm:text-sm text-emerald-200">${player.total?.toFixed(2) || '0.00'} committed</div>
                           </div>
                           <button
                             onClick={() => openBuyInModal(player)}
                             disabled={loading}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+                            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors text-xs sm:text-sm"
                           >
                             + Add Money
                           </button>
@@ -1497,7 +1497,7 @@ function PokerTracker() {
                     </div>
                     
                     {players.length === 0 && (
-                      <div className="text-center py-4 text-emerald-300">
+                      <div className="text-center py-3 sm:py-4 text-emerald-300 text-sm">
                         No players in game yet
                       </div>
                     )}
@@ -1505,17 +1505,17 @@ function PokerTracker() {
                 </div>
 
                 {/* 4. RECENT TRANSACTIONS */}
-                <div className="mb-8 pb-8 border-b border-white/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">📝</span>
-                    <h4 className="text-xl font-bold text-white">Recent Transactions</h4>
-                    <span className="bg-gray-500/20 text-gray-200 px-3 py-1 rounded-full text-sm border border-gray-400/30">
+                <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-white/20">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">📝</span>
+                    <h4 className="text-base sm:text-xl font-bold text-white">Recent Transactions</h4>
+                    <span className="bg-gray-500/20 text-gray-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm border border-gray-400/30">
                       Last {recentTransactions.length}
                     </span>
                   </div>
                   
                   {recentTransactions.length === 0 ? (
-                    <div className="text-center py-6 text-emerald-300">
+                    <div className="text-center py-4 sm:py-6 text-emerald-300 text-sm">
                       No transactions yet
                     </div>
                   ) : (
@@ -1523,14 +1523,14 @@ function PokerTracker() {
                       {recentTransactions.slice(0, 10).map((transaction) => (
                         <div
                           key={transaction.id}
-                          className="flex justify-between items-center p-3 bg-white/5 rounded-xl"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2.5 sm:p-3 bg-white/5 rounded-lg sm:rounded-xl gap-2"
                         >
-                          <div>
-                            <div className="font-medium text-white">
+                          <div className="flex-1">
+                            <div className="font-medium text-white text-sm">
                               {transaction.player_name} • ${transaction.amount} • {transaction.method}
                               {transaction.status === 'confirmed' && <span className="text-green-400 ml-2">✅</span>}
                             </div>
-                            <div className="text-sm text-emerald-200">
+                            <div className="text-xs text-emerald-200">
                               {transaction.type} • {new Date(transaction.timestamp).toLocaleString()}
                             </div>
                           </div>
@@ -1542,7 +1542,7 @@ function PokerTracker() {
                               transaction.amount
                             )}
                             disabled={loading}
-                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm transition-colors"
+                            className="px-2.5 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-xs transition-colors"
                           >
                             🗑️
                           </button>
@@ -1552,24 +1552,24 @@ function PokerTracker() {
                   )}
                 </div>
 
-                {/* 5. PLAYER MANAGEMENT */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">🚨</span>
-                    <h4 className="text-xl font-bold text-red-400">Danger Zone</h4>
-                    <span className="text-sm text-red-400">(permanent actions)</span>
+                {/* 5. DANGER ZONE */}
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <span className="text-xl sm:text-2xl">🚨</span>
+                    <h4 className="text-base sm:text-xl font-bold text-red-400">Danger Zone</h4>
                   </div>
+                  <p className="text-xs sm:text-sm text-red-400 mb-3">(permanent actions)</p>
                   
-                  <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-4">
-                    <div className="space-y-3">
+                  <div className="bg-red-500/20 border border-red-400/30 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                    <div className="space-y-2 sm:space-y-3">
                       {players.map((player) => (
                         <div
                           key={player.id}
-                          className="flex justify-between items-center p-3 bg-white/10 rounded-xl border border-red-400/30"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-white/10 rounded-lg sm:rounded-xl border border-red-400/30 gap-2"
                         >
                           <div>
-                            <div className="font-medium text-white">{player.name}</div>
-                            <div className="text-sm text-emerald-200">
+                            <div className="font-medium text-white text-sm sm:text-base">{player.name}</div>
+                            <div className="text-xs sm:text-sm text-emerald-200">
                               ${player.total?.toFixed(2) || '0.00'} committed • {player.payments?.length || 0} transactions
                             </div>
                           </div>
@@ -1581,16 +1581,16 @@ function PokerTracker() {
                               player.payments?.length || 0
                             )}
                             disabled={loading}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition-colors"
+                            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition-colors text-xs sm:text-sm"
                           >
-                            🗑️ Delete Player
+                            🗑️ Delete
                           </button>
                         </div>
                       ))}
                     </div>
                     
                     {players.length === 0 && (
-                      <div className="text-center py-4 text-emerald-300">
+                      <div className="text-center py-3 sm:py-4 text-emerald-300 text-sm">
                         No players to manage
                       </div>
                     )}
@@ -1599,11 +1599,11 @@ function PokerTracker() {
               </div>
 
               {/* Footer */}
-              <div className="pt-4 border-t border-white/20">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-emerald-200">
-                    <span className="font-medium">{pendingPayments.length}</span> pending payments • 
-                    <span className="font-medium"> {pendingCashOuts.length}</span> pending cash outs • 
+              <div className="pt-3 sm:pt-4 border-t border-white/20">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                  <div className="text-xs sm:text-sm text-emerald-200 text-center sm:text-left">
+                    <span className="font-medium">{pendingPayments.length}</span> pending • 
+                    <span className="font-medium"> {pendingCashOuts.length}</span> cashouts • 
                     <span className="font-medium"> {players.length}</span> players
                   </div>
                   <button
@@ -1615,7 +1615,7 @@ function PokerTracker() {
                       loadGameStats()
                     }}
                     disabled={loading}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors text-sm"
                   >
                     🔄 Refresh All
                   </button>
